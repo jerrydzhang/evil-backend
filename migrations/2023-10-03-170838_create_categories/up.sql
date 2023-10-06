@@ -1,0 +1,5 @@
+-- Your SQL goes here
+CREATE TABLE catagories (
+    id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    name VARCHAR(255) NOT NULL
+);

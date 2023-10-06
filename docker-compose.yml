@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  postgre:
+    container_name: postgres
+    image: postgres
+    environment:
+      POSTGRES_USER: evil-admin
+      POSTGRES_PASSWORD: evil
+    volumes:
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"

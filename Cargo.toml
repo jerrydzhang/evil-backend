@@ -1,0 +1,19 @@
+[package]
+name = "evil-backend"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+actix = "0.13.1"
+actix-cors = "0.6.4"
+actix-web = "4.4.0"
+bigdecimal = { version = "0.4.1", features = ["serde"] }
+chrono = { version = "0.4.31", features = ["serde"] }
+derive_more = "0.99.17"
+diesel = { version = "2.1.2", features = ["postgres", "r2d2", "chrono", "numeric"] }
+dotenv = "0.15.0"
+env_logger = "0.10.0"
+log = "0.4.20"
+serde = { version = "1.0.188", features = ["derive"] }
