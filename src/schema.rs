@@ -33,6 +33,7 @@ diesel::table! {
     users (id) {
         id -> Varchar,
         email -> Varchar,
+        roles -> Nullable<Array<Nullable<Text>>>,
     }
 }
 

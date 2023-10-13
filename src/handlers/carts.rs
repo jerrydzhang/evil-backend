@@ -1,18 +1,26 @@
-use actix_web::{get, web, HttpResponse, Responder, Result, error, post};
+use actix_identity::Identity;
+use actix_web::{get, web, HttpResponse, Responder, Result, error, post, put};
+use serde::Deserialize;
 
 use crate::models::carts::{CartSubmit, NewCartItem};
 use crate::models::dbpool::PgPool;
 use crate::database::carts::{db_get_cart_items_by_user_id, db_update_cart_item, db_create_cart_item, db_delete_cart_item, db_update_cart_item_from_cart};
 
-#[get("/cart/{id}")]
+#[derive(Deserialize)]
+pub(crate) struct Info {
+    user: String,
+}
+
+#[get("/cart")]
 pub(crate) async fn get_cart_items(
     pool: web::Data<PgPool>,
-    user_id: web::Path<String>,
+    info: web::Query<Info>,
+    _: Identity,
 ) -> Result<impl Responder> {
     let cart_items = web::block(move || {
         let mut conn = pool.get().unwrap();
 
-        db_get_cart_items_by_user_id(&mut conn, user_id.into_inner())
+        db_get_cart_items_by_user_id(&mut conn, info.user.clone())
     })
     .await?
     .map_err(error::ErrorInternalServerError)?;
@@ -24,6 +32,7 @@ pub(crate) async fn get_cart_items(
 pub(crate) async fn add_to_cart(
     pool: web::Data<PgPool>,
     new_cart: web::Json<NewCartItem>,
+    _: Identity,
 ) ->  Result<impl Responder> {
     let cart_item = new_cart.into_inner();
 
@@ -42,6 +51,7 @@ pub(crate) async fn add_to_cart(
 pub(crate) async fn update_cart_item(
     pool: web::Data<PgPool>,
     new_cart: web::Json<NewCartItem>,
+    _: Identity,
 ) ->  Result<impl Responder> {
 
     let cart_items = web::block(move || {
@@ -55,10 +65,12 @@ pub(crate) async fn update_cart_item(
     Ok(HttpResponse::Ok().json(cart_items))
 }
 
-#[post("/update_cart")]
+// Determine which items to delete and which to update based on the current cart and the new cart
+#[put("/update_cart")]
 pub(crate) async fn update_cart(
     pool: web::Data<PgPool>,
     cart_submit: web::Json<CartSubmit>,
+    _: Identity,
 ) -> Result<impl Responder> {
     let cart = cart_submit.cart.clone();
     let user_id = cart_submit.user_id.clone();
@@ -68,8 +80,13 @@ pub(crate) async fn update_cart(
 
         let current_cart = db_get_cart_items_by_user_id(&mut conn, user_id.clone())?;
 
+        // Check if there is a current cart
         match current_cart {
+            // If there is a current cart, update the cart with the submitted cart
             Some(current_cart) => {
+                // Iterate through the current cart
+                // If the current cart item is in the submitted cart, update the quantity
+                // If the current cart item is not in the submitted cart, delete the item
                 for cart_item in current_cart.clone() {
                     if cart.contains_key(&cart_item.product_id) {
                         if cart_item.quantity == cart.get(&cart_item.product_id).unwrap().clone() {
@@ -84,6 +101,8 @@ pub(crate) async fn update_cart(
                     }
                 }
 
+                // Iterate through the submitted cart
+                // If the submitted cart item is not in the current cart, create a new cart item
                 for cart_item in cart {
                     if current_cart.iter().any(|item| item.product_id == cart_item.0) {
                         continue;
@@ -98,6 +117,7 @@ pub(crate) async fn update_cart(
                     db_create_cart_item(&mut conn, new_cart_item)?;
                 }
             }
+            // If there is no current cart, create a new cart with the submitted cart
             None => {
                 for cart_item in cart {
                     let new_cart_item = NewCartItem {

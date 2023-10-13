@@ -1,4 +1,4 @@
-use actix_web::web;
+use actix_web::web::{self};
 
 use crate::handlers::{
 products::{
@@ -17,7 +17,7 @@ catagories::{
 },
 users::{
     create_user, 
-    delete_user,
+    delete_user, index, login, logout, update_roles, get_user,
 }, carts::{get_cart_items, update_cart, add_to_cart, update_cart_item}, };
 
 pub(crate) fn routes(cfg: &mut web::ServiceConfig) {
@@ -47,7 +47,12 @@ pub(crate) fn routes(cfg: &mut web::ServiceConfig) {
                 // users
                 web::scope("/user")
                 .service(create_user)
+                .service(update_roles)
                 .service(delete_user)
+                .service(get_user)
+                .service(index)
+                .service(login)
+                .service(logout)
             )
             .service(
                 // carts

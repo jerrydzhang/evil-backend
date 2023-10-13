@@ -3,9 +3,9 @@ mod handlers;
 mod middleware;
 mod models;
 mod routes;
-mod errors;
 mod server;
 mod schema;
+mod utils;
 
 use crate::server::server;
 

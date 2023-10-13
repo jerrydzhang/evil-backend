@@ -1,4 +1,5 @@
-use actix_web::{get, Responder, Result, web, error, HttpResponse, post, delete};
+use actix_identity::Identity;
+use actix_web::{get, Responder, Result, web, error, HttpResponse, post, delete, put};
 
 use crate::database::products::{
     db_get_all_products, 
@@ -10,7 +11,8 @@ use crate::database::products::{
     db_delete_product,
 };
 use crate::models::dbpool::PgPool;
-use crate::models::product::{Ids, NewProduct};
+use crate::models::product::{ProductIds, NewProduct};
+use crate::utils::auth::verify_identity;
 
 // returns all products in the database
 #[get("/products")]
@@ -36,7 +38,7 @@ async fn get_all_products(
 #[get("/products-by-id")]
 async fn get_multiple_products_by_id(
     pool: web::Data<PgPool>,
-    info: web::Query<Ids>,
+    info: web::Query<ProductIds>,
 ) -> Result<impl Responder> {
     // parse the query string into a vector of i32
     let ids = info.ids.split(",").map(|id| id.parse::<i32>().unwrap()).collect::<Vec<i32>>();
@@ -98,7 +100,9 @@ async fn get_products_by_catagory(
 async fn create_product(
     pool: web::Data<PgPool>,
     product: web::Json<NewProduct>,
+    user: Identity,
 ) -> Result<impl Responder> {
+    if !verify_identity(pool.clone(), user, Vec::from(["admin"])) {return Ok(HttpResponse::Unauthorized().finish());};
     let product = web::block(move || {
 
         let mut conn = pool.get().unwrap();
@@ -111,12 +115,15 @@ async fn create_product(
     Ok(HttpResponse::Ok().json(product))
 }
 
-#[post("/update_product/{id}")]
+#[put("/update_product/{id}")]
 async fn update_product(
     pool: web::Data<PgPool>,
     product_id: web::Path<i32>,
     product: web::Json<NewProduct>,
+    user: Identity,
 ) -> Result<impl Responder> {
+    if !verify_identity(pool.clone(), user, Vec::from(["admin"])) {return Ok(HttpResponse::Unauthorized().finish());};
+    
     let product = web::block(move || {
 
         let mut conn = pool.get().unwrap();
@@ -133,7 +140,9 @@ async fn update_product(
 async fn delete_product(
     pool: web::Data<PgPool>,
     product_id: web::Path<i32>,
+    user: Identity,
 ) -> Result<impl Responder> {
+    if !verify_identity(pool.clone(), user, Vec::from(["admin"])) {return Ok(HttpResponse::Unauthorized().finish());};
     let deleted_product = web::block(move || {
 
         let mut conn = pool.get().unwrap();

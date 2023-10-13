@@ -7,7 +7,7 @@ use serde::{Serialize, Deserialize};
 use crate::schema::products;
 
 #[derive(Debug, Clone, Serialize, Queryable, Insertable, Associations)]
-#[belongs_to(super::catagory::Catagory)]
+#[diesel(belongs_to(super::catagory::Catagory))]
 #[diesel(table_name = products)]
 pub(crate) struct Product {
     id: i32,
@@ -45,7 +45,7 @@ pub(crate) struct DisplayProduct {
 
 // used to get a list of ids from the client
 #[derive(Debug, Deserialize)]
-pub(crate) struct Ids {
+pub(crate) struct ProductIds {
     pub(crate) ids: String,
 }
 
