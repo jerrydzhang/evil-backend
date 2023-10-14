@@ -2,10 +2,10 @@ use actix_identity::Identity;
 use actix_web::{post, Result, web, Responder, HttpResponse, error, delete, HttpRequest, HttpMessage, get, put};
 use actix_web_httpauth::extractors::bearer::BearerAuth;
 
-use crate::{models::{dbpool::PgPool, user::{User, SubmitRoles, UserId}}, database::users::{db_create_user, db_delete_user, db_update_roles, db_get_user}, utils::{jwt::verify_jwt, auth::verify_identity}, schema::carts::id};
+use crate::{models::{dbpool::PgPool, user::{User, SubmitRoles, UserId}}, database::users::{db_create_user, db_delete_user, db_update_roles, db_get_user}, utils::{jwt::verify_jwt, auth::verify_identity}};
 
 
-#[post("/add_user")]
+#[post("/add")]
 async fn create_user(
     pool: web::Data<PgPool>,
     new_user: web::Json<User>,
@@ -22,7 +22,7 @@ async fn create_user(
     Ok(HttpResponse::Ok().json(user))
 }
 
-#[put("/update_roles")]
+#[put("/update")]
 async fn update_roles(
     pool: web::Data<PgPool>,
     submit_roles: web::Json<SubmitRoles>,
@@ -40,7 +40,7 @@ async fn update_roles(
     Ok(HttpResponse::Ok().json(user))
 }
 
-#[delete("/delete_user")]
+#[delete("/delete")]
 async fn delete_user(
     pool: web::Data<PgPool>,
     user_id: web::Json<String>,
@@ -57,7 +57,7 @@ async fn delete_user(
     Ok(HttpResponse::Ok().json(deleted_user))
 }
 
-#[get("/get_user")]
+#[get("")]
 async fn get_user(
     pool: web::Data<PgPool>,
     user_id: web::Query<UserId>,

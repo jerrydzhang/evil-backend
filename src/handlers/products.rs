@@ -15,7 +15,7 @@ use crate::models::product::{ProductIds, NewProduct};
 use crate::utils::auth::verify_identity;
 
 // returns all products in the database
-#[get("/products")]
+#[get("")]
 async fn get_all_products(
     pool: web::Data<PgPool>,
 ) -> Result<impl Responder> {
@@ -35,7 +35,7 @@ async fn get_all_products(
 }
 
 // returns multiple products by id though a query string
-#[get("/products-by-id")]
+#[get("/by-id")]
 async fn get_multiple_products_by_id(
     pool: web::Data<PgPool>,
     info: web::Query<ProductIds>,
@@ -56,7 +56,7 @@ async fn get_multiple_products_by_id(
 }
 
 // returns a single product by id
-#[get("/products/{id}")]
+#[get("/{id}")]
 async fn get_product_by_id(
     pool: web::Data<PgPool>,
     product_id: web::Path<i32>,
@@ -76,7 +76,7 @@ async fn get_product_by_id(
     Ok(HttpResponse::Ok().json(product))
 }
 
-#[get("/products-by-catagory/{catagory}")]
+#[get("/by-catagory/{catagory}")]
 async fn get_products_by_catagory(
     pool: web::Data<PgPool>,
     catagory: web::Path<String>,
@@ -96,7 +96,7 @@ async fn get_products_by_catagory(
     Ok(HttpResponse::Ok().json(products))
 }
 
-#[post("/create_product")]
+#[post("/create")]
 async fn create_product(
     pool: web::Data<PgPool>,
     product: web::Json<NewProduct>,
@@ -115,7 +115,7 @@ async fn create_product(
     Ok(HttpResponse::Ok().json(product))
 }
 
-#[put("/update_product/{id}")]
+#[put("/update/{id}")]
 async fn update_product(
     pool: web::Data<PgPool>,
     product_id: web::Path<i32>,
@@ -136,7 +136,7 @@ async fn update_product(
     Ok(HttpResponse::Ok().json(product))
 }
 
-#[delete("/delete_product/{id}")]
+#[delete("/delete/{id}")]
 async fn delete_product(
     pool: web::Data<PgPool>,
     product_id: web::Path<i32>,

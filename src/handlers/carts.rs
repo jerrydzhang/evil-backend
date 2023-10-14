@@ -11,7 +11,7 @@ pub(crate) struct Info {
     user: String,
 }
 
-#[get("/cart")]
+#[get("")]
 pub(crate) async fn get_cart_items(
     pool: web::Data<PgPool>,
     info: web::Query<Info>,
@@ -28,7 +28,7 @@ pub(crate) async fn get_cart_items(
     Ok(HttpResponse::Ok().json(cart_items))
 }
 
-#[post("/add_to_cart")]
+#[post("/add")]
 pub(crate) async fn add_to_cart(
     pool: web::Data<PgPool>,
     new_cart: web::Json<NewCartItem>,
@@ -47,7 +47,7 @@ pub(crate) async fn add_to_cart(
     Ok(HttpResponse::Ok().json(cart_items))
 }
 
-#[post("/update_cart_item")]
+#[post("/update")]
 pub(crate) async fn update_cart_item(
     pool: web::Data<PgPool>,
     new_cart: web::Json<NewCartItem>,

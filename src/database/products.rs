@@ -3,7 +3,7 @@ use diesel::{PgConnection, RunQueryDsl, QueryDsl, ExpressionMethods};
 
 use crate::models::product::{NewProduct, DisplayProduct};
 use crate::models::catagory::Catagory;
-use crate::schema::{catagories, carts};
+use crate::schema::{catagories};
 use crate::models::product::Product;
 use crate::schema::products::dsl::*;
 

@@ -2,7 +2,7 @@ use actix_web::{get, web, HttpResponse, Result, error, Responder, post, delete};
 
 use crate::{models::{dbpool::PgPool, catagory::NewCatagory}, database::catagories::{db_get_all_catagories, db_create_catagory, db_delete_catagory}};
 
-#[get("/catagories")]
+#[get("")]
 async fn get_all_catagories(
     pool: web::Data<PgPool>,
 ) -> Result<impl Responder> {
@@ -18,7 +18,7 @@ async fn get_all_catagories(
     Ok(HttpResponse::Ok().json(catagories))
 }
 
-#[post("/create_catagory")]
+#[post("/create")]
 async fn create_catagory(
     pool: web::Data<PgPool>,
     catagory: web::Json<NewCatagory>,
@@ -35,7 +35,7 @@ async fn create_catagory(
     Ok(HttpResponse::Ok().json(catagory))
 }
 
-#[delete("/delete_catagory")]
+#[delete("/delete")]
 async fn delete_catagory(
     pool: web::Data<PgPool>,
     catagory_id: web::Json<i32>,
