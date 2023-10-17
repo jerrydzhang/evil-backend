@@ -10,7 +10,7 @@ use crate::schema::carts;
 pub(crate) struct CartItem {
     pub(crate) id: i32,
     user_id: String,
-    pub(crate) product_id: i32,
+    pub(crate) product_id: String,
     pub(crate) quantity: i32,
 }
 
@@ -18,12 +18,12 @@ pub(crate) struct CartItem {
 #[diesel(table_name = carts)]
 pub(crate) struct NewCartItem {
     pub(crate) user_id: String,
-    pub(crate) product_id: i32,
+    pub(crate) product_id: String,
     pub(crate) quantity: i32,
 }
 
 #[derive(Debug, Clone, Deserialize)]
 pub(crate) struct CartSubmit {
     pub(crate) user_id: String,
-    pub(crate) cart: HashMap<i32, i32>,
+    pub(crate) cart: HashMap<String, i32>,
 }

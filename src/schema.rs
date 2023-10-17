@@ -4,28 +4,24 @@ diesel::table! {
     carts (id) {
         id -> Int4,
         user_id -> Varchar,
-        product_id -> Int4,
+        product_id -> Varchar,
         quantity -> Int4,
     }
 }
 
 diesel::table! {
-    catagories (id) {
-        id -> Int4,
-        name -> Varchar,
-    }
-}
-
-diesel::table! {
     products (id) {
-        id -> Int4,
+        id -> Varchar,
         name -> Varchar,
         description -> Nullable<Varchar>,
-        catagory_id -> Int4,
-        price -> Numeric,
+        catagory -> Nullable<Varchar>,
+        price -> Nullable<Numeric>,
         inventory -> Int4,
         last_updated -> Nullable<Timestamp>,
         created_at -> Nullable<Timestamp>,
+        images -> Nullable<Array<Nullable<Text>>>,
+        price_id -> Nullable<Varchar>,
+        active -> Bool,
     }
 }
 
@@ -39,11 +35,9 @@ diesel::table! {
 
 diesel::joinable!(carts -> products (product_id));
 diesel::joinable!(carts -> users (user_id));
-diesel::joinable!(products -> catagories (catagory_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     carts,
-    catagories,
     products,
     users,
 );

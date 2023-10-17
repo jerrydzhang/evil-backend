@@ -1,23 +1,25 @@
 use bigdecimal::BigDecimal;
 use chrono::NaiveDateTime;
 use diesel::AsChangeset;
-use diesel::prelude::{Insertable, Queryable, Associations};
+use diesel::prelude::{Insertable, Queryable};
 use serde::{Serialize, Deserialize};
 
 use crate::schema::products;
 
-#[derive(Debug, Clone, Serialize, Queryable, Insertable, Associations)]
-#[diesel(belongs_to(super::catagory::Catagory))]
+#[derive(Debug, Clone, Serialize, Queryable, Insertable, AsChangeset)]
 #[diesel(table_name = products)]
 pub(crate) struct Product {
-    id: i32,
+    pub(crate) id: String,
     name: String,
     description: Option<String>,
-    catagory_id: i32,
-    price: BigDecimal,
+    catagory: Option<String>,
+    price: Option<BigDecimal>,
     inventory: i32,
     last_updated: Option<NaiveDateTime>,
     created_at: Option<NaiveDateTime>,
+    images: Option<Vec<Option<String>>>,
+    price_id: Option<String>,
+    active: bool,
 }
 
 #[derive(Debug, Clone, Deserialize, Insertable, AsChangeset)]
@@ -25,22 +27,12 @@ pub(crate) struct Product {
 pub(crate) struct NewProduct {
     pub(crate) name: String,
     pub(crate) description: Option<String>,
-    pub(crate) catagory_id: i32,
-    pub(crate) price: BigDecimal,
-    pub(crate) inventory: i32,
-}
-
-#[derive(Debug, Clone, Serialize)]
-pub(crate) struct DisplayProduct {
-    id: i32,
-    name: String,
-    description: Option<String>,
-    catagory_id: i32,
-    catagory: String,
-    price: BigDecimal,
+    catagory: Option<String>,
+    pub(crate) price: Option<BigDecimal>,
     inventory: i32,
-    last_updated: Option<NaiveDateTime>,
-    created_at: Option<NaiveDateTime>,
+    pub(crate) images: Option<Vec<Option<String>>>,
+    price_id: Option<String>,
+    active: bool,
 }
 
 // used to get a list of ids from the client
@@ -49,21 +41,28 @@ pub(crate) struct ProductIds {
     pub(crate) ids: String,
 }
 
-impl DisplayProduct {
+impl Product {
     pub(crate) fn new(
-        product: Product,
-        catagory: String,
-    ) -> Self {
+        stripe_product: stripe::Product,
+    ) -> Self
+    {
         Self {
-            id: product.id,
-            name: product.name,
-            description: product.description,
-            catagory_id: product.catagory_id,
-            catagory,
-            price: product.price,
-            inventory: product.inventory,
-            last_updated: product.last_updated,
-            created_at: product.created_at,
+            id: stripe_product.id.to_string(),
+            name: stripe_product.name.unwrap(),
+            description: stripe_product.description,
+            catagory: match stripe_product.metadata {
+                Some(metadata) => metadata.get("catagory").map(|s| s.to_string()),
+                None => None,
+            },
+            price: None,
+            inventory: 0,
+            last_updated: None,
+            created_at: None,
+            images: stripe_product.images.map(|images| {
+                images.into_iter().map(|image| Some(image)).collect()
+            }),
+            price_id: None,
+            active: stripe_product.active.unwrap(),
         }
     }
 }

@@ -6,6 +6,7 @@ mod routes;
 mod server;
 mod schema;
 mod utils;
+mod stripe;
 
 use crate::server::server;
 

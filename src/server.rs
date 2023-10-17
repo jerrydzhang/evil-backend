@@ -12,11 +12,12 @@ pub(crate) async fn server() -> std::io::Result<()> {
     dotenv::dotenv().ok();
 
     let pool = initialize_db_pool();
+    let stripe_client = stripe::Client::new(std::env::var("STRIPE_SECRET_KEY").expect("STRIPE_SECRET_KEY should be set"));
     let secret_key = Key::generate();
 
     HttpServer::new(move || {
         App::new()
-            // enable CORS
+            // CORS
             .wrap(
                 Cors::default()
                     .allow_any_origin()
@@ -35,6 +36,8 @@ pub(crate) async fn server() -> std::io::Result<()> {
             )
             // pass the database pool to application so we can access it inside handlers
             .app_data(web::Data::new(pool.clone()))
+            // pass the stripe client to application so we can access it inside handlers
+            .app_data(web::Data::new(stripe_client.clone()))
             .wrap(Logger::default())
             .configure(routes)
     })

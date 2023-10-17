@@ -1,5 +1,6 @@
-use actix_identity::Identity;
-use actix_web::{get, Responder, Result, web, error, HttpResponse, post, delete, put};
+use actix_web::{get, Responder, Result, web, error, HttpResponse};
+use bigdecimal::{BigDecimal, FromPrimitive};
+
 
 use crate::database::products::{
     db_get_all_products, 
@@ -8,11 +9,10 @@ use crate::database::products::{
     db_get_products_by_catagory, 
     db_create_product, 
     db_update_product, 
-    db_delete_product,
+    db_update_price, db_delete_product,
 };
 use crate::models::dbpool::PgPool;
-use crate::models::product::{ProductIds, NewProduct};
-use crate::utils::auth::verify_identity;
+use crate::models::product::{ProductIds, self};
 
 // returns all products in the database
 #[get("")]
@@ -40,8 +40,8 @@ async fn get_multiple_products_by_id(
     pool: web::Data<PgPool>,
     info: web::Query<ProductIds>,
 ) -> Result<impl Responder> {
-    // parse the query string into a vector of i32
-    let ids = info.ids.split(",").map(|id| id.parse::<i32>().unwrap()).collect::<Vec<i32>>();
+    // parse the query string into a vector of Strings
+    let ids = info.ids.split(",").map(|id| id.parse::<String>().unwrap()).collect::<Vec<String>>();
 
     let products = web::block(move || {
 
@@ -59,7 +59,7 @@ async fn get_multiple_products_by_id(
 #[get("/{id}")]
 async fn get_product_by_id(
     pool: web::Data<PgPool>,
-    product_id: web::Path<i32>,
+    product_id: web::Path<String>,
 ) -> Result<impl Responder> {
     // unwrap the product_id from the web::Path<i32> type
     let product_id = product_id.into_inner();
@@ -88,7 +88,7 @@ async fn get_products_by_catagory(
 
         let mut conn = pool.get().unwrap();
 
-        db_get_products_by_catagory(&mut conn, catagory.parse::<i32>().unwrap())
+        db_get_products_by_catagory(&mut conn, catagory.parse::<String>().unwrap())
     })
     .await?
     .map_err(error::ErrorInternalServerError)?;
@@ -96,61 +96,139 @@ async fn get_products_by_catagory(
     Ok(HttpResponse::Ok().json(products))
 }
 
-#[post("/create")]
-async fn create_product(
+pub(crate) async fn create_product(
     pool: web::Data<PgPool>,
-    product: web::Json<NewProduct>,
-    user: Identity,
-) -> Result<impl Responder> {
-    if !verify_identity(pool.clone(), user, Vec::from(["admin"])) {return Ok(HttpResponse::Unauthorized().finish());};
-    let product = web::block(move || {
+    stripe_product: stripe::Product,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let product = product::Product::new(stripe_product);
 
+    web::block(move || {
         let mut conn = pool.get().unwrap();
-
-        db_create_product(&mut conn, product.into_inner())
+        db_create_product(&mut conn, product)
     })
     .await?
     .map_err(error::ErrorInternalServerError)?;
 
-    Ok(HttpResponse::Ok().json(product))
+    Ok(())
 }
 
-#[put("/update/{id}")]
-async fn update_product(
+pub(crate) async fn update_product(
     pool: web::Data<PgPool>,
-    product_id: web::Path<i32>,
-    product: web::Json<NewProduct>,
-    user: Identity,
-) -> Result<impl Responder> {
-    if !verify_identity(pool.clone(), user, Vec::from(["admin"])) {return Ok(HttpResponse::Unauthorized().finish());};
+    stripe_product: stripe::Product,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let product = product::Product::new(stripe_product);
+    web::block(move|| {
+        let mut conn = pool.get().unwrap();
+        db_update_product(&mut conn, product)
+    })
+    .await?
+    .map_err(error::ErrorInternalServerError)?;
+
+    Ok(())
+}
+
+pub(crate) async fn delete_product(
+    pool: web::Data<PgPool>,
+    stripe_product: stripe::Product,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let product = product::Product::new(stripe_product);
+    web::block(move|| {
+        let mut conn = pool.get().unwrap();
+        db_delete_product(&mut conn, product.id)
+    })
+    .await?
+    .map_err(error::ErrorInternalServerError)?;
+
+    Ok(())
+}
+
+pub(crate) async fn change_price(
+    pool: web::Data<PgPool>,
+    stripe_price: stripe::Price,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let price = BigDecimal::from_i64(stripe_price.unit_amount.unwrap()).unwrap()/100;
+    let price_id = stripe_price.id.as_str().to_string();
+    let product_id = stripe_price.product.unwrap().id().to_string();
+
+    web::block(move || {
+        let mut conn = pool.get().unwrap();
+        db_update_price(&mut conn, product_id, price, price_id)
+    })
+    .await?
+    .map_err(error::ErrorInternalServerError)?;
+
+    Ok(())
+}
+
+
+// #[post("/create")]
+// async fn create_product(
+//     pool: web::Data<PgPool>,
+//     stripe_client: web::Data<Client>,
+//     product: web::Json<NewProduct>,
+//     user: Identity,
+// ) -> Result<impl Responder> {
+//     if !verify_identity(pool.clone(), user, Vec::from(["admin"])) {return Ok(HttpResponse::Unauthorized().finish());};
+
+//     let stripe_constructor = product.clone();
+
+//     let stripe_product = stripe_create_product(&stripe_client, stripe_constructor)
+//         .await
+//         .map_err(error::ErrorInternalServerError)?;
+
+//     let product = DbProduct::new(
+//         stripe_product.id.as_str().to_string(),
+//         product.into_inner(),
+//     );
     
-    let product = web::block(move || {
+//     let product = web::block(move || {
 
-        let mut conn = pool.get().unwrap();
+//         let mut conn = pool.get().unwrap();
 
-        db_update_product(&mut conn, product_id.into_inner(), product.into_inner())
-    })
-    .await?
-    .map_err(error::ErrorInternalServerError)?;
+//         db_create_product(&mut conn, product)
+//     })
+//     .await?
+//     .map_err(error::ErrorInternalServerError)?;
 
-    Ok(HttpResponse::Ok().json(product))
-}
+//     Ok(HttpResponse::Ok().json(product))
+// }
 
-#[delete("/delete/{id}")]
-async fn delete_product(
-    pool: web::Data<PgPool>,
-    product_id: web::Path<i32>,
-    user: Identity,
-) -> Result<impl Responder> {
-    if !verify_identity(pool.clone(), user, Vec::from(["admin"])) {return Ok(HttpResponse::Unauthorized().finish());};
-    let deleted_product = web::block(move || {
+// #[put("/update/{id}")]
+// async fn update_product(
+//     pool: web::Data<PgPool>,
+//     product_id: web::Path<String>,
+//     product: web::Json<NewProduct>,
+//     user: Identity,
+// ) -> Result<impl Responder> {
+//     if !verify_identity(pool.clone(), user, Vec::from(["admin"])) {return Ok(HttpResponse::Unauthorized().finish());};
+    
+//     let product = web::block(move || {
 
-        let mut conn = pool.get().unwrap();
+//         let mut conn = pool.get().unwrap();
 
-        db_delete_product(&mut conn, product_id.into_inner())
-    })
-    .await?
-    .map_err(error::ErrorInternalServerError)?;
+//         db_update_product(&mut conn, product_id.into_inner(), product.into_inner())
+//     })
+//     .await?
+//     .map_err(error::ErrorInternalServerError)?;
 
-    Ok(HttpResponse::Ok().json(deleted_product))
-}
+//     Ok(HttpResponse::Ok().json(product))
+// }
+
+// #[delete("/delete/{id}")]
+// async fn delete_product(
+//     pool: web::Data<PgPool>,
+//     product_id: web::Path<String>,
+//     user: Identity,
+// ) -> Result<impl Responder> {
+//     if !verify_identity(pool.clone(), user, Vec::from(["admin"])) {return Ok(HttpResponse::Unauthorized().finish());};
+//     let deleted_product = web::block(move || {
+
+//         let mut conn = pool.get().unwrap();
+
+//         db_delete_product(&mut conn, product_id.into_inner())
+//     })
+//     .await?
+//     .map_err(error::ErrorInternalServerError)?;
+
+//     Ok(HttpResponse::Ok().json(deleted_product))
+// }

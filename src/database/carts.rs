@@ -61,7 +61,7 @@ pub(crate) fn db_delete_cart_item (
 
 pub(crate) fn db_delete_cart_items_by_product (
     conn: &mut PgConnection,
-    product: i32,
+    product: String,
 ) -> Result<usize, Error> {
     let deleted_cart_items = diesel::delete(carts.filter(product_id.eq(product)))
         .execute(conn)?;
