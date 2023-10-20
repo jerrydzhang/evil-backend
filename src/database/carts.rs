@@ -68,3 +68,13 @@ pub(crate) fn db_delete_cart_items_by_product (
 
     Ok(deleted_cart_items)
 }
+
+pub(crate) fn db_delete_cart_items_by_user (
+    conn: &mut PgConnection,
+    user: String,
+) -> Result<usize, Error> {
+    let deleted_cart_items = diesel::delete(carts.filter(user_id.eq(user)))
+        .execute(conn)?;
+
+    Ok(deleted_cart_items)
+}

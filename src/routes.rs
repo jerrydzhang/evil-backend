@@ -16,7 +16,7 @@ users::{
     index, 
     login, 
     logout, 
-    update_roles, 
+    update_user, 
     get_user,
 }, 
 carts::{
@@ -24,7 +24,7 @@ carts::{
     update_cart,
     add_to_cart,
     update_cart_item
-}, }, stripe::webhook::webhook_handler};
+}, checkout::checkout, }, stripe::webhook::webhook_handler};
 
 pub(crate) fn routes(cfg: &mut web::ServiceConfig) {
     cfg
@@ -32,6 +32,7 @@ pub(crate) fn routes(cfg: &mut web::ServiceConfig) {
         .service(
             web::scope("/api")
             .service(webhook_handler)
+            .service(checkout)
             .service(
                 // products
                 web::scope("/product")
@@ -47,7 +48,7 @@ pub(crate) fn routes(cfg: &mut web::ServiceConfig) {
                 // users
                 web::scope("/user")
                 .service(create_user)
-                .service(update_roles)
+                .service(update_user)
                 .service(delete_user)
                 .service(get_user)
                 .service(index)

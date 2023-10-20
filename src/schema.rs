@@ -30,6 +30,7 @@ diesel::table! {
         id -> Varchar,
         email -> Varchar,
         roles -> Nullable<Array<Nullable<Text>>>,
+        stripe_id -> Nullable<Varchar>,
     }
 }
 

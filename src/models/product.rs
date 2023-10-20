@@ -18,7 +18,7 @@ pub(crate) struct Product {
     last_updated: Option<NaiveDateTime>,
     created_at: Option<NaiveDateTime>,
     images: Option<Vec<Option<String>>>,
-    price_id: Option<String>,
+    pub(crate) price_id: Option<String>,
     active: bool,
 }
 
