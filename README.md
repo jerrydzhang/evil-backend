@@ -1,4 +1,6 @@
 # evil-backend
+## Setup
+`cargo watch -x run`
 ## TODO
 - [ ] Someway to add to inventory
 - Process transactions
