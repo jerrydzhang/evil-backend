@@ -1,6 +1,10 @@
 # evil-backend
 ## Setup
-`cargo watch -x run`
+`docker-compose up -d` run postgres container  
+`cargo install cargo-watch` install cargo-watch  
+`cargo install diesel_cli --no-default-features --features postgres`  install diesel  
+`diesel migration run` run migrations  
+`cargo watch -x run` run server
 ## TODO
 - [ ] Someway to add to inventory
 - Process transactions

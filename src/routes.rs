@@ -1,11 +1,11 @@
-use actix_web::web::{self, service};
+use actix_web::web::{self};
 
 use crate::{handlers::{
 products::{
     get_all_products,
     get_product_by_id, 
     get_multiple_products_by_id,
-    get_products_by_category, 
+    get_products_by_catagory, 
     update_product_inventory, 
     // create_product, 
     // update_product, 
@@ -45,7 +45,7 @@ pub(crate) fn routes(cfg: &mut web::ServiceConfig) {
                 .service(get_all_products)
                 .service(get_multiple_products_by_id)
                 .service(get_product_by_id)
-                .service(get_products_by_category)
+                .service(get_products_by_catagory)
                 .service(update_product_inventory)
                 // .service(create_product)
                 // .service(update_product)

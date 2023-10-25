@@ -1,6 +1,6 @@
 use actix_identity::Identity;
 use actix_web::{post, web, HttpResponse, Responder, Result, error};
-use stripe::{Client, CheckoutSession, Customer, Expandable, CheckoutSessionMode, CreateCheckoutSessionShippingAddressCollectionAllowedCountries, generated::checkout::checkout_session, CheckoutSessionStatus};
+use stripe::{Client, CheckoutSession, Customer, Expandable, CheckoutSessionMode, CreateCheckoutSessionShippingAddressCollectionAllowedCountries, CheckoutSessionStatus};
 
 use crate::{models::{dbpool::PgPool, product}, database::{carts::{db_get_cart_items_by_user_id, db_delete_cart_items_by_user}, products::{db_get_product_by_id, db_update_product}, users::{db_get_user, db_user_stripe_to_user_id, db_user_id_to_stripe_id}}, extractors::claims::Claims};
 

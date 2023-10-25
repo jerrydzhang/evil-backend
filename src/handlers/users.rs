@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use actix_identity::Identity;
 use actix_web::{post, Result, web, Responder, HttpResponse, error, delete, HttpRequest, HttpMessage, get, put};
 
-use crate::{models::{dbpool::PgPool, user::{User, SubmitRoles, UserId}}, database::users::{db_create_user, db_delete_user, db_update_user, db_get_user}, utils::{jwt::verify_jwt, auth::verify_identity}, extractors::claims::Claims};
+use crate::{models::{dbpool::PgPool, user::{User, SubmitRoles, UserId}}, database::users::{db_create_user, db_delete_user, db_update_user, db_get_user}, utils::{auth::verify_identity}, extractors::claims::Claims};
 
 
 #[post("/add")]
