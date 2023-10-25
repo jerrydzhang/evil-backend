@@ -1,21 +1,22 @@
 use actix_identity::Identity;
 use actix_web::{post, web, HttpResponse, Responder, Result, error};
-use stripe::{Client, CheckoutSession, Customer, Expandable, CheckoutSessionMode};
+use stripe::{Client, CheckoutSession, Customer, Expandable, CheckoutSessionMode, CreateCheckoutSessionShippingAddressCollectionAllowedCountries, generated::checkout::checkout_session, CheckoutSessionStatus};
 
-use crate::{models::dbpool::PgPool, database::{carts::{db_get_cart_items_by_user_id, db_delete_cart_items_by_user}, products::db_get_product_by_id, users::{db_get_user, db_user_stripe_to_user_id}}};
+use crate::{models::{dbpool::PgPool, product}, database::{carts::{db_get_cart_items_by_user_id, db_delete_cart_items_by_user}, products::{db_get_product_by_id, db_update_product}, users::{db_get_user, db_user_stripe_to_user_id, db_user_id_to_stripe_id}}, extractors::claims::Claims};
 
-#[post("/checkout")]
+#[post("/")]
 async fn checkout(
-    client: web::Data<Client>,
     pool: web::Data<PgPool>,
-    identity: Identity
+    client: web::Data<Client>,
+    identity: Identity,
+    _claims: Claims,
 ) -> Result<impl Responder> {
+    remove_checkoutsessions(pool.clone(), &client, &identity).await?;
     // get cart items
     let user_id = identity.id().unwrap();    
     let cloned_pool = pool.clone();
     let cart_items = web::block(move || {
         let mut conn = cloned_pool.get().unwrap();
-
         db_get_cart_items_by_user_id(&mut conn, user_id)
     })
     .await?
@@ -26,7 +27,6 @@ async fn checkout(
     let cloned_pool = pool.clone();
     let user = web::block(move || {
         let mut conn = cloned_pool.get().unwrap();
-
         db_get_user(&mut conn, user_id)
     })
     .await?
@@ -44,6 +44,43 @@ async fn checkout(
         None => return Err(error::ErrorBadRequest("Unable to find cart")),
     };
 
+    let update_cart_items = cart_items.clone();
+    let cloned_pool = pool.clone();
+    let enough_stock = web::block(move || {
+        let mut conn = cloned_pool.get().unwrap();
+        let enough_stock = update_cart_items.iter().try_for_each(|item| {
+            let id = item.product_id.clone();
+            let new_quantity = item.quantity.clone();
+            let product = db_get_product_by_id(&mut conn, id).unwrap();
+            if product.inventory < new_quantity {
+                return Err(());
+            }
+            Ok(())
+        });
+
+        if enough_stock.is_err() {
+            return Err(());
+        }
+
+        update_cart_items.iter().for_each(|item| {
+            let id = item.product_id.clone();
+            let new_quantity = item.quantity.clone();
+            let product = db_get_product_by_id(&mut conn, id).unwrap();
+            let new_product = product::Product{
+                id: product.id.clone(),
+                inventory: (product.inventory - new_quantity),
+                ..Default::default()
+            };
+            db_update_product(&mut conn, new_product).unwrap();
+        });
+        enough_stock
+    })
+    .await?;
+
+    if enough_stock.is_err() {
+        return Err(error::ErrorBadRequest("Not enough stock"));
+    }
+
     // check if user exists
     let user = match user {
         Some(user) => user,
@@ -58,14 +95,18 @@ async fn checkout(
     // create a checkout session
     let checkout_session = {
         let frontend_url = std::env::var("FRONTEND_URL").expect("FRONTEND_URL must be set");
-        let success_url = format!("{}/checkout/success", frontend_url);
-        let cancel_url = format!("{}/checkout/cancel", frontend_url);
+        let success_url = format!("{}/checkout-approved", frontend_url);
+        let cancel_url = format!("{}/checkout-canceled", frontend_url);
 
         let mut params = stripe::CreateCheckoutSession::new(&success_url);
         params.cancel_url = Some(&cancel_url);
         params.customer = Some(customer.id);
         params.mode = Some(CheckoutSessionMode::Payment);
-        params.line_items = Some(cart_items.into_iter().map(|item| {
+        params.shipping_address_collection = Some(stripe::CreateCheckoutSessionShippingAddressCollection{
+            allowed_countries: vec![CreateCheckoutSessionShippingAddressCollectionAllowedCountries::Us],
+            ..Default::default()});
+        params.expires_at = Some((chrono::Utc::now() + chrono::Duration::hours(1)).timestamp());
+        params.line_items = Some(cart_items.clone().into_iter().map(|item| {
             let product = db_get_product_by_id(&mut pool.get().unwrap(), item.product_id).unwrap();
             stripe::CreateCheckoutSessionLineItems {
                 price: Some(product.price_id.unwrap()),
@@ -76,7 +117,7 @@ async fn checkout(
         
         params.expand = &["line_items", "line_items.data.price.product"];
 
-        CheckoutSession::create(&client, params).await.unwrap()
+        CheckoutSession::create(&client, params).await.map_err(error::ErrorInternalServerError)?
     };
 
     log::info!(
@@ -96,6 +137,44 @@ async fn checkout(
     Ok(HttpResponse::Ok().json(checkout_session.url.unwrap()))
 }
 
+#[post("/cancel")]
+async fn cancel_checkout(
+    pool: web::Data<PgPool>,
+    client: web::Data<Client>,
+    identity: Identity,
+    _claims: Claims,
+) -> Result<impl Responder> {
+    remove_checkoutsessions(pool, &client, &identity).await?;
+    Ok(HttpResponse::Ok())
+}
+
+async fn remove_checkoutsessions(
+    pool: web::Data<PgPool>,
+    client: &web::Data<Client>,
+    identity: &Identity,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let user_id = identity.id().unwrap();
+    let stripe_id = web::block(move || {
+        let mut conn = pool.get().unwrap();
+        db_user_id_to_stripe_id(&mut conn, user_id)
+    })
+    .await?
+    .map_err(error::ErrorInternalServerError)?;
+    
+    let stripe_id = match stripe_id {
+        Some(stripe_id) => stripe_id,
+        None => return Err(Box::new(error::ErrorBadRequest("User does not exist"))),
+    };
+
+    let checkout_session = CheckoutSession::list(&client, &Default::default()).await.map_err(error::ErrorInternalServerError)?;
+    let checkout_session = checkout_session.data.into_iter().find(|session| (session.customer.as_ref().unwrap().id().to_string() == stripe_id) && (session.status == Some(CheckoutSessionStatus::Open)));
+    log::info!("checkout session: {:?}", checkout_session);
+    if let Some(checkout_session) = checkout_session {
+        CheckoutSession::expire(&client, &checkout_session.id).await.map_err(error::ErrorInternalServerError)?;
+    }
+    Ok(())
+}
+
 pub(crate) async fn checkout_success(
     pool: web::Data<PgPool>,
     checkout_session: CheckoutSession,
@@ -107,11 +186,57 @@ pub(crate) async fn checkout_success(
         let mut conn = pool.get().unwrap();
 
         let user = db_user_stripe_to_user_id(&mut conn, stripe_user_id.clone())?;
+        // let cart = db_get_cart_items_by_user_id(&mut conn, user.clone().unwrap().id)?.unwrap();
+
+        // // for each item deleted from the cart, update the product inventory
+        // cart.iter().for_each(|item| {
+        //     let id = item.product_id.clone();
+        //     let new_quantity = item.quantity.clone();
+        //     let product = db_get_product_by_id(&mut conn, id).unwrap();
+        //     let new_product = product::Product{
+        //         id: product.id.clone(),
+        //         inventory: (product.inventory - new_quantity),
+        //         ..Default::default()
+        //     };
+        //     db_update_product(&mut conn, new_product).unwrap();
+        // });
+
+        // delete the cart
         db_delete_cart_items_by_user(&mut conn, user.unwrap().id)
     })
     .await?
     .map_err(error::ErrorInternalServerError)?;
 
     log::info!("deleted {} cart items for user {}", cart, checkout_session.customer.unwrap().id().to_string());
+    Ok(())
+}
+
+pub(crate) async fn checkout_expired(
+    pool: web::Data<PgPool>,
+    checkout_session: CheckoutSession,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let stripe_user_id = checkout_session.customer.clone().unwrap().id().to_string();
+
+    // convert stripe id to auth0 id and then delete cart associated with auth0 id
+    web::block(move || {
+        let mut conn = pool.get().unwrap();
+
+        let user = db_user_stripe_to_user_id(&mut conn, stripe_user_id.clone()).unwrap();
+        let cart = db_get_cart_items_by_user_id(&mut conn, user.clone().unwrap().id).unwrap().unwrap();
+        // // for each item deleted from the cart, update the product inventory
+        cart.iter().for_each(|item| {
+            let id = item.product_id.clone();
+            let new_quantity = item.quantity.clone();
+            let product = db_get_product_by_id(&mut conn, id).unwrap();
+            let new_product = product::Product{
+                id: product.id.clone(),
+                inventory: (product.inventory + new_quantity),
+                ..Default::default()
+            };
+            db_update_product(&mut conn, new_product).unwrap();
+        });
+    })
+    .await?;
+
     Ok(())
 }

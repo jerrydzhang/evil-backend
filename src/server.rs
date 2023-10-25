@@ -17,6 +17,14 @@ pub(crate) async fn server() -> std::io::Result<()> {
 
     HttpServer::new(move || {
         App::new()
+            // identity middleware
+            .wrap(IdentityMiddleware::default())
+            // cookie session middleware
+            .wrap(SessionMiddleware::builder(CookieSessionStore::default(), secret_key.clone())
+                .cookie_secure(false)
+                .session_lifecycle(PersistentSession::default().session_ttl(Duration::seconds(36000)))
+                .build(),
+            )
             // CORS
             .wrap(
                 Cors::default()
@@ -26,19 +34,11 @@ pub(crate) async fn server() -> std::io::Result<()> {
                     .supports_credentials()
                     .max_age(3600),
             )
-            // identity middleware
-            .wrap(IdentityMiddleware::default())
-            // cookie session middleware
-            .wrap(SessionMiddleware::builder(CookieSessionStore::default(), secret_key.clone())
-                .cookie_secure(false)
-                .session_lifecycle(PersistentSession::default().session_ttl(Duration::seconds(36000)))
-                .build(),
-            )
+            .wrap(Logger::default())
             // pass the database pool to application so we can access it inside handlers
             .app_data(web::Data::new(pool.clone()))
             // pass the stripe client to application so we can access it inside handlers
             .app_data(web::Data::new(stripe_client.clone()))
-            .wrap(Logger::default())
             .configure(routes)
     })
     .bind(("0.0.0.0", 8080))?

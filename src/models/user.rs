@@ -19,7 +19,7 @@ pub(crate) struct SubmitRoles {
     pub(crate) roles: Vec<String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub(crate) struct UserId {
     pub(crate) id: String,
 }

@@ -60,3 +60,14 @@ pub(crate) fn db_user_stripe_to_user_id (
 
     Ok(user)
 }
+
+pub(crate) fn db_user_id_to_stripe_id (
+    conn: &mut PgConnection,
+    user_id: String,
+) -> Result<Option<String>, Error> {
+    let stripe = users.find(user_id)
+        .select(stripe_id)
+        .first::<Option<String>>(conn)?;
+
+    Ok(stripe)
+}

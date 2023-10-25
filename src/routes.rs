@@ -5,7 +5,8 @@ products::{
     get_all_products,
     get_product_by_id, 
     get_multiple_products_by_id,
-    get_products_by_catagory, 
+    get_products_by_category, 
+    update_product_inventory, 
     // create_product, 
     // update_product, 
     // delete_product,
@@ -24,7 +25,7 @@ carts::{
     update_cart,
     add_to_cart,
     update_cart_item
-}, checkout::checkout, }, stripe::webhook::webhook_handler};
+}, checkout::{checkout, cancel_checkout}, }, stripe::webhook::webhook_handler};
 
 pub(crate) fn routes(cfg: &mut web::ServiceConfig) {
     cfg
@@ -32,14 +33,20 @@ pub(crate) fn routes(cfg: &mut web::ServiceConfig) {
         .service(
             web::scope("/api")
             .service(webhook_handler)
-            .service(checkout)
+            .service(
+                // checkout
+                web::scope("/checkout")
+                .service(checkout)
+                .service(cancel_checkout)
+            )
             .service(
                 // products
                 web::scope("/product")
                 .service(get_all_products)
                 .service(get_multiple_products_by_id)
                 .service(get_product_by_id)
-                .service(get_products_by_catagory)
+                .service(get_products_by_category)
+                .service(update_product_inventory)
                 // .service(create_product)
                 // .service(update_product)
                 // .service(delete_product)

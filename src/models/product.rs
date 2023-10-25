@@ -6,20 +6,20 @@ use serde::{Serialize, Deserialize};
 
 use crate::schema::products;
 
-#[derive(Debug, Clone, Serialize, Queryable, Insertable, AsChangeset)]
+#[derive(Debug, Default, Clone, Serialize, Queryable, Insertable, AsChangeset)]
 #[diesel(table_name = products)]
 pub(crate) struct Product {
     pub(crate) id: String,
-    name: String,
-    description: Option<String>,
-    catagory: Option<String>,
-    price: Option<BigDecimal>,
-    inventory: i32,
-    last_updated: Option<NaiveDateTime>,
-    created_at: Option<NaiveDateTime>,
-    images: Option<Vec<Option<String>>>,
+    pub(crate) name: String,
+    pub(crate) description: Option<String>,
+    pub(crate) category: Option<String>,
+    pub(crate) price: Option<BigDecimal>,
+    pub(crate) inventory: i32,
+    pub(crate) last_updated: Option<NaiveDateTime>,
+    pub(crate) created_at: Option<NaiveDateTime>,
+    pub(crate) images: Option<Vec<Option<String>>>,
     pub(crate) price_id: Option<String>,
-    active: bool,
+    pub(crate) active: bool,
 }
 
 #[derive(Debug, Clone, Deserialize, Insertable, AsChangeset)]
@@ -27,7 +27,7 @@ pub(crate) struct Product {
 pub(crate) struct NewProduct {
     pub(crate) name: String,
     pub(crate) description: Option<String>,
-    catagory: Option<String>,
+    category: Option<String>,
     pub(crate) price: Option<BigDecimal>,
     inventory: i32,
     pub(crate) images: Option<Vec<Option<String>>>,
@@ -41,6 +41,11 @@ pub(crate) struct ProductIds {
     pub(crate) ids: String,
 }
 
+#[derive(Debug, Deserialize)]
+pub(crate) struct ChangeInventory {
+    pub(crate) inventory: i32,
+}
+
 impl Product {
     pub(crate) fn new(
         stripe_product: stripe::Product,
@@ -50,12 +55,15 @@ impl Product {
             id: stripe_product.id.to_string(),
             name: stripe_product.name.unwrap(),
             description: stripe_product.description,
-            catagory: match stripe_product.metadata {
-                Some(metadata) => metadata.get("catagory").map(|s| s.to_string()),
+            category: match stripe_product.metadata.clone() {
+                Some(metadata) => metadata.get("category").map(|s| s.to_string()),
                 None => None,
             },
             price: None,
-            inventory: 0,
+            inventory: match stripe_product.metadata.clone() {
+                Some(metadata) => metadata.get("inventory").map(|s| s.parse::<i32>().unwrap()).unwrap_or(0),
+                None => 0,
+            },
             last_updated: None,
             created_at: None,
             images: stripe_product.images.map(|images| {

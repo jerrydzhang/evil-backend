@@ -4,7 +4,7 @@
 
 //     use diesel::{PgConnection, Connection};
 //     use dotenv::dotenv;
-//     use crate::{database::{products::{db_get_all_products, db_create_product, db_delete_product}, catagories::{db_get_all_catagories, db_create_catagory, db_delete_catagory}}, models::{product::NewProduct, catagory::NewCatagory}};
+//     use crate::{database::{products::{db_get_all_products, db_create_product, db_delete_product}, catagories::{db_get_all_catagories, db_create_category, db_delete_category}}, models::{product::NewProduct, category::Newcategory}};
 
 //     #[test]
 //     fn catagories_test() {
@@ -14,29 +14,29 @@
 //         let conn = &mut PgConnection::establish(&database_url)
 //             .unwrap_or_else(|_| panic!("Error connecting to {}", database_url));
 
-//         let new_catagory1 = NewCatagory{ name: "shirts".to_string() };
-//         let new_catagory2 = NewCatagory{ name: "pants".to_string() };
-//         let new_catagory3 = NewCatagory{ name: "shoes".to_string() };
+//         let new_category1 = Newcategory{ name: "shirts".to_string() };
+//         let new_category2 = Newcategory{ name: "pants".to_string() };
+//         let new_category3 = Newcategory{ name: "shoes".to_string() };
 
-//         let created_catagory1 = db_create_catagory(conn, new_catagory1);
-//         let created_catagory2 = db_create_catagory(conn, new_catagory2);
-//         let created_catagory3 = db_create_catagory(conn, new_catagory3);
+//         let created_category1 = db_create_category(conn, new_category1);
+//         let created_category2 = db_create_category(conn, new_category2);
+//         let created_category3 = db_create_category(conn, new_category3);
 
-//         assert!(created_catagory1.is_ok());
-//         assert!(created_catagory2.is_ok());
-//         assert!(created_catagory3.is_ok());
+//         assert!(created_category1.is_ok());
+//         assert!(created_category2.is_ok());
+//         assert!(created_category3.is_ok());
 
 //         let catagories = db_get_all_catagories(conn).unwrap();
 
 //         assert!(catagories.is_some());
 
 
-//         let new_catagory4 = NewCatagory{ name: "hats".to_string()};
-//         let created_catagory4 = db_create_catagory(conn, new_catagory4);
-//         assert!(created_catagory4.is_ok());
+//         let new_category4 = Newcategory{ name: "hats".to_string()};
+//         let created_category4 = db_create_category(conn, new_category4);
+//         assert!(created_category4.is_ok());
 
-//         let deleted_catagory4 = db_delete_catagory(conn, 4);
-//         assert!(deleted_catagory4.is_ok());
+//         let deleted_category4 = db_delete_category(conn, 4);
+//         assert!(deleted_category4.is_ok());
 //     }
 
 //     #[test]
@@ -50,7 +50,7 @@
 //         let new_product1 = NewProduct{
 //             name: "test_name".to_string(),
 //             description: Some("test_description".to_string()),
-//             catagory_id: 1,
+//             category_id: 1,
 //             price: bigdecimal::BigDecimal::from(10),
 //             inventory: 10,
 //         };
@@ -58,7 +58,7 @@
 //         let new_product2 = NewProduct{
 //             name: "test_name2".to_string(),
 //             description: Some("test_description2".to_string()),
-//             catagory_id: 2,
+//             category_id: 2,
 //             price: bigdecimal::BigDecimal::from(11),
 //             inventory: 11,
 //         };
@@ -66,7 +66,7 @@
 //         let new_product3 = NewProduct{
 //             name: "test_name3".to_string(),
 //             description: Some("test_description3".to_string()),
-//             catagory_id: 3,
+//             category_id: 3,
 //             price: bigdecimal::BigDecimal::from(12),
 //             inventory: 12,
 //         };
@@ -92,7 +92,7 @@
 //         let new_product4 = NewProduct{
 //             name: "test_name4".to_string(),
 //             description: Some("test_description4".to_string()),
-//             catagory_id: 3,
+//             category_id: 3,
 //             price: bigdecimal::BigDecimal::from(13),
 //             inventory: 13,
 //         };

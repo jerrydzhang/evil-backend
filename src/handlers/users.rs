@@ -1,8 +1,9 @@
+use std::collections::HashSet;
+
 use actix_identity::Identity;
 use actix_web::{post, Result, web, Responder, HttpResponse, error, delete, HttpRequest, HttpMessage, get, put};
-use actix_web_httpauth::extractors::bearer::BearerAuth;
 
-use crate::{models::{dbpool::PgPool, user::{User, SubmitRoles, UserId}}, database::users::{db_create_user, db_delete_user, db_update_user, db_get_user}, utils::{jwt::verify_jwt, auth::verify_identity}};
+use crate::{models::{dbpool::PgPool, user::{User, SubmitRoles, UserId}}, database::users::{db_create_user, db_delete_user, db_update_user, db_get_user}, utils::{jwt::verify_jwt, auth::verify_identity}, extractors::claims::Claims};
 
 
 #[post("/add")]
@@ -96,53 +97,16 @@ async fn index(
 #[post("/login")]
 async fn login(
     req: HttpRequest,
-    pool: web::Data<PgPool>,
-    user: web::Json<User>,
-    credientials: BearerAuth,
+    claims: Claims,
 ) -> Result<impl Responder> {
-    // verify the token is valid
-    let token = match verify_jwt(credientials.token()).await {
-        Ok(token) => token,
-        Err(_) => return Err(error::ErrorUnauthorized("Invalid token")),
-    };
-
-    // verify the token is for the user
-    let sub = token.claims.get("sub").unwrap();
-
-    if sub != &user.id {
-        return Err(error::ErrorUnauthorized("Invalid token"));
-    }
-
-    // clone the email so we can use it later
-    let email = user.email.clone();
-
-    // get the user associated with the sub
-    let user = web::block(move || {
-
-        let mut conn = pool.get().unwrap();
-
-        db_get_user(&mut conn, user.id.clone())
-    })
-    .await?
-    .map_err(error::ErrorInternalServerError)?;
-
-    // check if user is in database
-    let user = match user {
-        Some(user) => user,
-        None => { 
-            return Err(error::ErrorUnauthorized("Invalid token"));
-        }
-    };
-
-    // verify the token is for the user in the database
-    if email != user.email {
+    if !claims.validate_roles(&HashSet::from(["admin".to_string()])) {
         return Err(error::ErrorUnauthorized("Invalid token"));
     }
 
     // login the user
-    Identity::login(&req.extensions() ,user.id.clone())?;
+    Identity::login(&req.extensions() ,claims.sub.clone())?;
 
-    Ok(HttpResponse::Ok().json(user))
+    Ok(HttpResponse::Ok())
 }
 
 #[post("/logout")]

@@ -7,6 +7,7 @@ mod server;
 mod schema;
 mod utils;
 mod stripe;
+mod extractors;
 
 use crate::server::server;
 
