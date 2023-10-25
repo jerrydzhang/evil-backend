@@ -99,10 +99,7 @@ async fn login(
     req: HttpRequest,
     claims: Claims,
 ) -> Result<impl Responder> {
-    if !claims.validate_roles(&HashSet::from(["admin".to_string()])) {
-        return Err(error::ErrorUnauthorized("Invalid token"));
-    }
-
+    log::info!("{:?}", claims);
     // login the user
     Identity::login(&req.extensions() ,claims.sub.clone())?;
 

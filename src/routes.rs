@@ -5,7 +5,7 @@ products::{
     get_all_products,
     get_product_by_id, 
     get_multiple_products_by_id,
-    get_products_by_catagory, 
+    get_products_by_category, 
     update_product_inventory, 
     // create_product, 
     // update_product, 
@@ -45,7 +45,7 @@ pub(crate) fn routes(cfg: &mut web::ServiceConfig) {
                 .service(get_all_products)
                 .service(get_multiple_products_by_id)
                 .service(get_product_by_id)
-                .service(get_products_by_catagory)
+                .service(get_products_by_category)
                 .service(update_product_inventory)
                 // .service(create_product)
                 // .service(update_product)

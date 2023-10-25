@@ -12,7 +12,7 @@ pub(crate) struct Product {
     pub(crate) id: String,
     pub(crate) name: String,
     pub(crate) description: Option<String>,
-    pub(crate) catagory: Option<String>,
+    pub(crate) category: Option<String>,
     pub(crate) price: Option<BigDecimal>,
     pub(crate) inventory: i32,
     pub(crate) last_updated: Option<NaiveDateTime>,
@@ -27,7 +27,7 @@ pub(crate) struct Product {
 pub(crate) struct NewProduct {
     pub(crate) name: String,
     pub(crate) description: Option<String>,
-    catagory: Option<String>,
+    category: Option<String>,
     pub(crate) price: Option<BigDecimal>,
     inventory: i32,
     pub(crate) images: Option<Vec<Option<String>>>,
@@ -55,8 +55,8 @@ impl Product {
             id: stripe_product.id.to_string(),
             name: stripe_product.name.unwrap(),
             description: stripe_product.description,
-            catagory: match stripe_product.metadata.clone() {
-                Some(metadata) => metadata.get("catagory").map(|s| s.to_string()),
+            category: match stripe_product.metadata.clone() {
+                Some(metadata) => metadata.get("category").map(|s| s.to_string()),
                 None => None,
             },
             price: None,

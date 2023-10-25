@@ -8,7 +8,7 @@ use crate::database::products::{
     db_get_all_products, 
     db_get_product_by_id, 
     db_get_multiple_products_by_id,
-    db_get_products_by_catagory, 
+    db_get_products_by_category, 
     db_create_product, 
     db_update_product, 
     db_delete_product,
@@ -75,17 +75,17 @@ async fn get_product_by_id(
     Ok(HttpResponse::Ok().json(product))
 }
 
-#[get("/catagory/{catagory}")]
-async fn get_products_by_catagory(
+#[get("/category/{category}")]
+async fn get_products_by_category(
     pool: web::Data<PgPool>,
-    catagory: web::Path<String>,
+    category: web::Path<String>,
 ) -> Result<impl Responder> {
-    // unwrap the catagory from the web::Path<String> type
-    let catagory = catagory.into_inner();
+    // unwrap the category from the web::Path<String> type
+    let category = category.into_inner();
 
     let products = web::block(move || {
         let mut conn = pool.get().unwrap();
-        db_get_products_by_catagory(&mut conn, catagory.parse::<String>().unwrap())
+        db_get_products_by_category(&mut conn, category.parse::<String>().unwrap())
     })
     .await?
     .map_err(error::ErrorInternalServerError)?;

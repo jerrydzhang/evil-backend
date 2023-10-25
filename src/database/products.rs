@@ -20,7 +20,7 @@ pub(crate) fn db_get_product_by_id(
     conn: &mut PgConnection,
     product_id: String,
 ) -> Result<Product, Error> {
-    // do an innerjoin of the product and its corresponding catagory
+    // do an innerjoin of the product and its corresponding category
     let product = products
         .find(product_id)
         .first::<Product>(conn)?;
@@ -41,16 +41,16 @@ pub(crate) fn db_get_multiple_products_by_id(
     Ok(products_by_id)
 }
 
-pub(crate) fn db_get_products_by_catagory(
+pub(crate) fn db_get_products_by_category(
     conn: &mut PgConnection,
-    catagory_name: String,
+    category_name: String,
 ) -> Result<Option<Vec<Product>>, Error> {
-    // do an inner join of the product and its corresponding catagory
-    let products_with_catagory = products
-        .filter(catagory.eq(catagory_name))
+    // do an inner join of the product and its corresponding category
+    let products_with_category = products
+        .filter(category.eq(category_name))
         .load::<Product>(conn)?;
 
-    Ok(Some(products_with_catagory))
+    Ok(Some(products_with_category))
 }
 
 pub(crate) fn db_create_product(
