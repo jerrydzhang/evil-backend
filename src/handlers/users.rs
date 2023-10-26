@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use actix_identity::Identity;
 use actix_web::{post, Result, web, Responder, HttpResponse, error, delete, HttpRequest, HttpMessage, get, put};
 
-use crate::{models::{dbpool::PgPool, user::{User, SubmitRoles, UserId}}, database::users::{db_create_user, db_delete_user, db_update_user, db_get_user}, utils::{auth::verify_identity}, extractors::claims::Claims};
+use crate::{models::{dbpool::PgPool, user::{User, SubmitRoles, UserId}}, database::users::{db_create_user, db_delete_user, db_update_user, db_get_user}, extractors::claims::{Claims, self}};
 
 
 #[post("/add")]
@@ -62,13 +62,14 @@ async fn delete_user(
 async fn get_user(
     pool: web::Data<PgPool>,
     user_id: web::Query<UserId>,
-    identity: Identity,
+    claims: Claims,
 ) -> Result<impl Responder> {
     // verify the user is getting their own information
     // if the user is an admin bypass this check
-    if identity.id().unwrap() != user_id.id {
-        // admin check
-        if !verify_identity(pool.clone(), identity, Vec::from(["admin"])) {return Ok(HttpResponse::Unauthorized().finish());};
+    if !claims.validate_roles(&HashSet::from(["admin".to_string()])) {
+        if claims.sub != user_id.id {
+            return Ok(HttpResponse::Unauthorized().finish());
+        }
     }
 
     let user = web::block(move || {
@@ -85,13 +86,9 @@ async fn get_user(
 
 #[get("/index")]
 async fn index(
-    user: Option<Identity>,
+    claims: Claims,
 ) -> Result<impl Responder> {
-    if let Some(user) = user {
-        Ok(HttpResponse::Ok().json(user.id().unwrap()))
-    } else {
-        Ok(HttpResponse::Ok().json("No user"))
-    }
+    Ok(HttpResponse::Ok().json(claims.sub))
 }
 
 #[post("/login")]

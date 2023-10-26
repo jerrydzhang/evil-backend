@@ -1,7 +1,7 @@
-use actix_identity::Identity;
 use actix_web::{get, web, HttpResponse, Responder, Result, error, post, put};
 use serde::Deserialize;
 
+use crate::extractors::claims::Claims;
 use crate::models::carts::{CartSubmit, NewCartItem};
 use crate::models::dbpool::PgPool;
 use crate::database::carts::{db_get_cart_items_by_user_id, db_update_cart_item, db_create_cart_item, db_delete_cart_item, db_update_cart_item_from_cart};
@@ -15,7 +15,7 @@ pub(crate) struct Info {
 pub(crate) async fn get_cart_items(
     pool: web::Data<PgPool>,
     info: web::Query<Info>,
-    _: Identity,
+    _claims: Claims,
 ) -> Result<impl Responder> {
     let cart_items = web::block(move || {
         let mut conn = pool.get().unwrap();
@@ -32,7 +32,7 @@ pub(crate) async fn get_cart_items(
 pub(crate) async fn add_to_cart(
     pool: web::Data<PgPool>,
     new_cart: web::Json<NewCartItem>,
-    _: Identity,
+    _claims: Claims,
 ) ->  Result<impl Responder> {
     let cart_item = new_cart.into_inner();
 
@@ -51,12 +51,10 @@ pub(crate) async fn add_to_cart(
 pub(crate) async fn update_cart_item(
     pool: web::Data<PgPool>,
     new_cart: web::Json<NewCartItem>,
-    _: Identity,
+    _claims: Claims,
 ) ->  Result<impl Responder> {
-
     let cart_items = web::block(move || {
         let mut conn = pool.get().unwrap();
-
         db_update_cart_item_from_cart(&mut conn, new_cart.into_inner())
     })
     .await?
@@ -70,7 +68,7 @@ pub(crate) async fn update_cart_item(
 pub(crate) async fn update_cart(
     pool: web::Data<PgPool>,
     cart_submit: web::Json<CartSubmit>,
-    _: Identity,
+    _claims: Claims,
 ) -> Result<impl Responder> {
     let cart = cart_submit.cart.clone();
     let user_id = cart_submit.user_id.clone();

@@ -1,4 +1,3 @@
-use actix_identity::Identity;
 use actix_web::{post, web, HttpResponse, Responder, Result, error};
 use stripe::{Client, CheckoutSession, Customer, Expandable, CheckoutSessionMode, CreateCheckoutSessionShippingAddressCollectionAllowedCountries, CheckoutSessionStatus};
 
@@ -8,12 +7,11 @@ use crate::{models::{dbpool::PgPool, product}, database::{carts::{db_get_cart_it
 async fn checkout(
     pool: web::Data<PgPool>,
     client: web::Data<Client>,
-    identity: Identity,
-    _claims: Claims,
+    claims: Claims,
 ) -> Result<impl Responder> {
-    remove_checkoutsessions(pool.clone(), &client, &identity).await?;
+    remove_checkoutsessions(pool.clone(), &client, claims.sub.clone()).await?;
     // get cart items
-    let user_id = identity.id().unwrap();    
+    let user_id = claims.sub.clone();    
     let cloned_pool = pool.clone();
     let cart_items = web::block(move || {
         let mut conn = cloned_pool.get().unwrap();
@@ -23,7 +21,7 @@ async fn checkout(
     .map_err(error::ErrorInternalServerError)?;
 
     // get user
-    let user_id = identity.id().unwrap();
+    let user_id = claims.sub.clone();
     let cloned_pool = pool.clone();
     let user = web::block(move || {
         let mut conn = cloned_pool.get().unwrap();
@@ -141,19 +139,17 @@ async fn checkout(
 async fn cancel_checkout(
     pool: web::Data<PgPool>,
     client: web::Data<Client>,
-    identity: Identity,
-    _claims: Claims,
+    claims: Claims,
 ) -> Result<impl Responder> {
-    remove_checkoutsessions(pool, &client, &identity).await?;
+    remove_checkoutsessions(pool, &client, claims.sub).await?;
     Ok(HttpResponse::Ok())
 }
 
 async fn remove_checkoutsessions(
     pool: web::Data<PgPool>,
     client: &web::Data<Client>,
-    identity: &Identity,
+    user_id: String,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let user_id = identity.id().unwrap();
     let stripe_id = web::block(move || {
         let mut conn = pool.get().unwrap();
         db_user_id_to_stripe_id(&mut conn, user_id)

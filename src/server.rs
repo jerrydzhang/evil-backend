@@ -13,18 +13,9 @@ pub(crate) async fn server() -> std::io::Result<()> {
 
     let pool = initialize_db_pool();
     let stripe_client = stripe::Client::new(std::env::var("STRIPE_SECRET_KEY").expect("STRIPE_SECRET_KEY should be set"));
-    let secret_key = Key::generate();
 
     HttpServer::new(move || {
         App::new()
-            // identity middleware
-            .wrap(IdentityMiddleware::default())
-            // cookie session middleware
-            .wrap(SessionMiddleware::builder(CookieSessionStore::default(), secret_key.clone())
-                .cookie_secure(false)
-                .session_lifecycle(PersistentSession::default().session_ttl(Duration::seconds(36000)))
-                .build(),
-            )
             // CORS
             .wrap(
                 Cors::default()
