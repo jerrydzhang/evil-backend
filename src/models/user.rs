@@ -1,9 +1,9 @@
-use diesel::prelude::{Insertable, Queryable};
+use diesel::prelude::{Insertable, Queryable, Identifiable};
 use serde::{Serialize, Deserialize};
 
 use crate::schema::users;
 
-#[derive(Debug, Clone, Serialize, Deserialize, Queryable, Insertable)]
+#[derive(Debug, Clone, Serialize, Deserialize, Identifiable, Queryable, Insertable)]
 #[diesel(table_name = users)]
 pub(crate) struct User {
     pub(crate) id: String,

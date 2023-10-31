@@ -10,6 +10,17 @@ diesel::table! {
 }
 
 diesel::table! {
+    orders (id) {
+        id -> Varchar,
+        user_id -> Varchar,
+        products -> Jsonb,
+        status -> Varchar,
+        created_at -> Timestamp,
+        updated_at -> Timestamp,
+    }
+}
+
+diesel::table! {
     products (id) {
         id -> Varchar,
         name -> Varchar,
@@ -36,9 +47,11 @@ diesel::table! {
 
 diesel::joinable!(carts -> products (product_id));
 diesel::joinable!(carts -> users (user_id));
+diesel::joinable!(orders -> users (user_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     carts,
+    orders,
     products,
     users,
 );

@@ -1,7 +1,7 @@
 use diesel::result::Error;
 use diesel::{PgConnection, RunQueryDsl, QueryDsl, ExpressionMethods};
 
-use crate::models::product::Product;
+use crate::models::product::{Product, NewProduct};
 use crate::schema::products::dsl::*;
 
 use super::carts::db_delete_cart_items_by_product;
@@ -45,12 +45,22 @@ pub(crate) fn db_get_products_by_category(
     conn: &mut PgConnection,
     category_name: String,
 ) -> Result<Option<Vec<Product>>, Error> {
-    // do an inner join of the product and its corresponding category
     let products_with_category = products
         .filter(category.eq(category_name))
         .load::<Product>(conn)?;
 
     Ok(Some(products_with_category))
+}
+
+pub(crate) fn db_expand_products(
+    conn: &mut PgConnection,
+    product_ids: Vec<String>,
+) -> Result<Vec<Product>, Error> {
+    let expanded_products = products
+        .filter(id.eq_any(product_ids))
+        .load::<Product>(conn)?;
+
+    Ok(expanded_products)
 }
 
 pub(crate) fn db_create_product(
@@ -66,15 +76,15 @@ pub(crate) fn db_create_product(
 
 pub(crate) fn db_update_product(
     conn: &mut PgConnection,
-    new_product: Product,
+    new_product: NewProduct,
 ) -> Result<Product, Error> {
 
-    diesel::update(products.find(new_product.id.clone()))
+    diesel::update(products.find(new_product.id.clone().unwrap()))
         .set(&new_product)
         .get_result::<Product>(conn)?;
 
     let current_time = chrono::Local::now().naive_local();
-    let product = diesel::update(products.find(new_product.id.clone()))
+    let product = diesel::update(products.find(new_product.id.clone().unwrap()))
         .set(last_updated.eq(current_time))
         .get_result::<Product>(conn)?;
 

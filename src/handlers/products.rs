@@ -150,7 +150,7 @@ pub(crate) async fn update_product(
     pool: web::Data<PgPool>,
     stripe_product: stripe::Product,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let product = product::Product::new(stripe_product);
+    let product = product::NewProduct::new(stripe_product);
     web::block(move|| {
         let mut conn = pool.get().unwrap();
         db_update_product(&mut conn, product)
@@ -184,8 +184,8 @@ pub(crate) async fn change_price(
     let price_id = stripe_price.id.as_str().to_string();
     let product_id = stripe_price.product.unwrap().id().to_string();
 
-    let new_product = product::Product{
-        id: product_id.clone(),
+    let new_product = product::NewProduct{
+        id: Some(product_id.clone()),
         price: Some(price.clone()),
         price_id: Some(price_id.clone()),
         ..Default::default()

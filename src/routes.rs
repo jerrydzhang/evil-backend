@@ -7,16 +7,11 @@ products::{
     get_multiple_products_by_id,
     get_products_by_category, 
     update_product_inventory, 
-    // create_product, 
-    // update_product, 
-    // delete_product,
 }, 
 users::{
     create_user, 
     delete_user, 
-    index, 
-    login, 
-    logout, 
+    index,
     update_user, 
     get_user,
 }, 
@@ -25,7 +20,7 @@ carts::{
     update_cart,
     add_to_cart,
     update_cart_item
-}, checkout::{checkout, cancel_checkout}, }, stripe::webhook::webhook_handler};
+}, checkout::{checkout, cancel_checkout}, orders::{get_orders, get_order_by_id, update_order, update_order_status, delete_order, create_order_handler, get_expanded_orders}, }, stripe::webhook::webhook_handler};
 
 pub(crate) fn routes(cfg: &mut web::ServiceConfig) {
     cfg
@@ -59,8 +54,6 @@ pub(crate) fn routes(cfg: &mut web::ServiceConfig) {
                 .service(delete_user)
                 .service(get_user)
                 .service(index)
-                .service(login)
-                .service(logout)
             )
             .service(
                 // carts
@@ -69,6 +62,16 @@ pub(crate) fn routes(cfg: &mut web::ServiceConfig) {
                 .service(add_to_cart)
                 .service(update_cart_item)
                 .service(update_cart)
+            )
+            .service(
+                web::scope("/order")
+                .service(get_orders)
+                .service(get_order_by_id)
+                .service(get_expanded_orders)
+                .service(create_order_handler)
+                .service(update_order)
+                .service(update_order_status)
+                .service(delete_order)
             )
         );
 }

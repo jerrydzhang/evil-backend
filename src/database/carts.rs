@@ -1,7 +1,7 @@
 use diesel::result::Error;
 use diesel::{PgConnection, QueryDsl, RunQueryDsl, ExpressionMethods};
 
-use crate::models::carts::{CartItem, NewCartItem};
+use crate::models::cart::{CartItem, NewCartItem};
 use crate::schema::carts::dsl::*;
 
 pub(crate) fn db_get_cart_items_by_user_id (

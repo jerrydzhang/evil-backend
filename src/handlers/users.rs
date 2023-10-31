@@ -1,9 +1,8 @@
 use std::collections::HashSet;
 
-use actix_identity::Identity;
-use actix_web::{post, Result, web, Responder, HttpResponse, error, delete, HttpRequest, HttpMessage, get, put};
+use actix_web::{post, Result, web, Responder, HttpResponse, error, delete, get, put};
 
-use crate::{models::{dbpool::PgPool, user::{User, SubmitRoles, UserId}}, database::users::{db_create_user, db_delete_user, db_update_user, db_get_user}, extractors::claims::{Claims, self}};
+use crate::{models::{dbpool::PgPool, user::{User, SubmitRoles, UserId}}, database::users::{db_create_user, db_delete_user, db_update_user, db_get_user}, extractors::claims::Claims};
 
 
 #[post("/add")]
@@ -89,25 +88,4 @@ async fn index(
     claims: Claims,
 ) -> Result<impl Responder> {
     Ok(HttpResponse::Ok().json(claims.sub))
-}
-
-#[post("/login")]
-async fn login(
-    req: HttpRequest,
-    claims: Claims,
-) -> Result<impl Responder> {
-    log::info!("{:?}", claims);
-    // login the user
-    Identity::login(&req.extensions() ,claims.sub.clone())?;
-
-    Ok(HttpResponse::Ok())
-}
-
-#[post("/logout")]
-async fn logout(
-    user: Identity,
-) -> Result<impl Responder> {
-    user.logout();
-
-    Ok(HttpResponse::Ok().json("Logged out"))
 }

@@ -1,11 +1,14 @@
 use std::collections::HashMap;
 
-use diesel::{prelude::{Queryable, Insertable}, AsChangeset};
+use diesel::{prelude::{Queryable, Insertable, Associations, Identifiable}, AsChangeset};
 use serde::{Serialize, Deserialize};
 
+use crate::models::{user::User, product::Product};
 use crate::schema::carts;
 
-#[derive(Debug, Clone, Serialize, Deserialize, Queryable, Insertable)]
+#[derive(Debug, Clone, Serialize, Associations, Deserialize, Queryable, Identifiable, Insertable)]
+#[diesel(belongs_to(User))]
+#[diesel(belongs_to(Product))]
 #[diesel(table_name = carts)]
 pub(crate) struct CartItem {
     pub(crate) id: i32,

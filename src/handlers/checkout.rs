@@ -1,7 +1,7 @@
 use actix_web::{post, web, HttpResponse, Responder, Result, error};
 use stripe::{Client, CheckoutSession, Customer, Expandable, CheckoutSessionMode, CreateCheckoutSessionShippingAddressCollectionAllowedCountries, CheckoutSessionStatus};
 
-use crate::{models::{dbpool::PgPool, product}, database::{carts::{db_get_cart_items_by_user_id, db_delete_cart_items_by_user}, products::{db_get_product_by_id, db_update_product}, users::{db_get_user, db_user_stripe_to_user_id, db_user_id_to_stripe_id}}, extractors::claims::Claims};
+use crate::{models::{dbpool::PgPool, product}, database::{carts::{db_get_cart_items_by_user_id, db_delete_cart_items_by_user}, products::{db_get_product_by_id, db_update_product}, users::{db_get_user, db_user_stripe_to_user_id, db_user_id_to_stripe_id}}, extractors::claims::Claims, handlers::orders::create_order};
 
 #[post("/")]
 async fn checkout(
@@ -64,9 +64,9 @@ async fn checkout(
             let id = item.product_id.clone();
             let new_quantity = item.quantity.clone();
             let product = db_get_product_by_id(&mut conn, id).unwrap();
-            let new_product = product::Product{
-                id: product.id.clone(),
-                inventory: (product.inventory - new_quantity),
+            let new_product = product::NewProduct{
+                id: Some(product.id.clone()),
+                inventory: Some(product.inventory - new_quantity),
                 ..Default::default()
             };
             db_update_product(&mut conn, new_product).unwrap();
@@ -177,25 +177,13 @@ pub(crate) async fn checkout_success(
 ) -> Result<(), Box<dyn std::error::Error>> {
     let stripe_user_id = checkout_session.customer.clone().unwrap().id().to_string();
 
+    create_order(pool.clone(), checkout_session.customer.clone().unwrap().id().to_string()).await?;
+
     // convert stripe id to auth0 id and then delete cart associated with auth0 id
     let cart = web::block(move || {
         let mut conn = pool.get().unwrap();
 
         let user = db_user_stripe_to_user_id(&mut conn, stripe_user_id.clone())?;
-        // let cart = db_get_cart_items_by_user_id(&mut conn, user.clone().unwrap().id)?.unwrap();
-
-        // // for each item deleted from the cart, update the product inventory
-        // cart.iter().for_each(|item| {
-        //     let id = item.product_id.clone();
-        //     let new_quantity = item.quantity.clone();
-        //     let product = db_get_product_by_id(&mut conn, id).unwrap();
-        //     let new_product = product::Product{
-        //         id: product.id.clone(),
-        //         inventory: (product.inventory - new_quantity),
-        //         ..Default::default()
-        //     };
-        //     db_update_product(&mut conn, new_product).unwrap();
-        // });
 
         // delete the cart
         db_delete_cart_items_by_user(&mut conn, user.unwrap().id)
@@ -224,9 +212,9 @@ pub(crate) async fn checkout_expired(
             let id = item.product_id.clone();
             let new_quantity = item.quantity.clone();
             let product = db_get_product_by_id(&mut conn, id).unwrap();
-            let new_product = product::Product{
-                id: product.id.clone(),
-                inventory: (product.inventory + new_quantity),
+            let new_product = product::NewProduct{
+                id: Some(product.id.clone()),
+                inventory: Some(product.inventory + new_quantity),
                 ..Default::default()
             };
             db_update_product(&mut conn, new_product).unwrap();

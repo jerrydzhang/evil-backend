@@ -2,7 +2,7 @@ use actix_web::{get, web, HttpResponse, Responder, Result, error, post, put};
 use serde::Deserialize;
 
 use crate::extractors::claims::Claims;
-use crate::models::carts::{CartSubmit, NewCartItem};
+use crate::models::cart::{CartSubmit, NewCartItem};
 use crate::models::dbpool::PgPool;
 use crate::database::carts::{db_get_cart_items_by_user_id, db_update_cart_item, db_create_cart_item, db_delete_cart_item, db_update_cart_item_from_cart};
 

@@ -1,7 +1,5 @@
 use actix_cors::Cors;
-use actix_identity::IdentityMiddleware;
-use actix_session::{SessionMiddleware, storage::CookieSessionStore, config::PersistentSession};
-use actix_web::{App, HttpServer, middleware::Logger, web, cookie::{Key, time::Duration}};
+use actix_web::{App, HttpServer, middleware::Logger, web};
 
 use crate::{routes::routes, database::init_db::initialize_db_pool};
 
