@@ -14,7 +14,7 @@ pub(crate) struct Product {
     pub(crate) description: Option<String>,
     pub(crate) category: Option<String>,
     pub(crate) price: Option<BigDecimal>,
-    pub(crate) inventory: i32,
+    pub(crate) inventory: Option<i32>,
     pub(crate) last_updated: Option<NaiveDateTime>,
     pub(crate) created_at: Option<NaiveDateTime>,
     pub(crate) images: Option<Vec<Option<String>>>,
@@ -36,8 +36,8 @@ impl Product {
             },
             price: None,
             inventory: match stripe_product.metadata.clone() {
-                Some(metadata) => metadata.get("inventory").map(|s| s.parse::<i32>().unwrap()).unwrap_or(0),
-                None => 0,
+                Some(metadata) => Some(metadata.get("inventory").map(|s| s.parse::<i32>().unwrap()).unwrap_or(0)),
+                None => None,
             },
             last_updated: None,
             created_at: None,
@@ -80,8 +80,11 @@ impl NewProduct {
             },
             price: None,
             inventory: match stripe_product.metadata.clone() {
-                Some(metadata) => Some(metadata.get("inventory").map(|s| s.parse::<i32>().unwrap()).unwrap_or(0)),
-                None => Some(0),
+                Some(metadata) => match metadata.get("inventory").map(|s| s.parse::<i32>().unwrap()) {
+                    Some(inventory) => Some(inventory),
+                    None => None,
+                },
+                None => None,
             },
             last_updated: None,
             created_at: None,
@@ -101,6 +104,7 @@ pub(crate) struct ProductIds {
 }
 
 #[derive(Debug, Deserialize)]
-pub(crate) struct ChangeInventory {
+pub(crate) struct UpdatePayload {
     pub(crate) inventory: i32,
+    pub(crate) is_active: bool,
 }

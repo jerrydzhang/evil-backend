@@ -63,6 +63,30 @@ pub(crate) fn db_get_order_by_id(
     Ok(order)
 }
 
+pub(crate) fn db_get_expanded_order_by_id(
+    conn: &mut PgConnection,
+    order_id: String,
+) -> Result<ExpandedOrder, Error> {
+    let order = orders
+        .find(order_id)
+        .first::<Order>(conn)?;
+
+    let product_ids = order.products.as_object().unwrap();
+    let expanded_products = product_ids.iter()
+        .map(|(product_id, quantity)| {
+            let product = db_expand_products(conn, vec![product_id.to_string()]).unwrap();
+            let product = product.first().unwrap();
+            let product = product.clone();
+            let quantity = quantity.as_i64().unwrap() as i32;
+            OrderProduct::new(product, quantity)
+        })
+        .collect::<Vec<OrderProduct>>();
+
+    let expanded_order = ExpandedOrder::new(order, expanded_products);
+
+    Ok(expanded_order)
+}
+
 pub(crate) fn db_get_orders_by_user_id(
     conn: &mut PgConnection,
     user: String,
@@ -78,6 +102,7 @@ pub(crate) fn db_create_order(
     conn: &mut PgConnection,
     new_order: NewOrder,
 ) -> Result<Order, Error> {
+    log::info!("new_order: {:?}", new_order);
     let order = diesel::insert_into(orders)
         .values(&new_order)
         .get_result::<Order>(conn)?;

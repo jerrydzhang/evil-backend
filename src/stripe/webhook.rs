@@ -1,22 +1,25 @@
 use std::borrow::Borrow;
 
 use actix_web::{post, HttpRequest, web, HttpResponse, Responder, Result};
-use stripe::{Webhook, EventType, EventObject};
+use stripe::{Webhook, EventType, EventObject, Client};
 
 use crate::{models::dbpool::PgPool, handlers::{products::{create_product, change_price, update_product, delete_product}, checkout::{checkout_success, checkout_expired}}};
 
 #[post("stripe_webhooks")]
 pub async fn webhook_handler(
     pool: web::Data<PgPool>,
+    client: web::Data<Client>,
     req: HttpRequest, 
     payload: web::Bytes
 ) -> Result<impl Responder> {
-    handle_webhook(pool, req, payload).await?;
+    log::info!("Received webhook request: {:?}", req);
+    handle_webhook(pool, client, req, payload).await?;
     Ok(HttpResponse::Ok().finish())
 }
 
 pub async fn handle_webhook(
     pool: web::Data<PgPool>,
+    client: web::Data<Client>,
     req: HttpRequest, 
     payload: web::Bytes,
 ) -> Result<(), Box<dyn std::error::Error>> {
@@ -48,7 +51,7 @@ pub async fn handle_webhook(
             }
             EventType::CheckoutSessionCompleted => {
                 if let EventObject::CheckoutSession(session) = event.data.object {
-                    checkout_success(pool, session).await?;
+                    checkout_success(pool, client, session).await?;
                 }
             }
             EventType::CheckoutSessionExpired => {

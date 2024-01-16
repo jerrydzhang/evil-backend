@@ -15,7 +15,7 @@ use crate::database::products::{
 };
 use crate::extractors::claims::Claims;
 use crate::models::dbpool::PgPool;
-use crate::models::product::{ProductIds, self, ChangeInventory};
+use crate::models::product::{ProductIds, self, UpdatePayload};
 
 // returns all products in the database
 #[get("")]
@@ -98,7 +98,7 @@ async fn update_product_inventory(
     pool: web::Data<PgPool>,
     client: web::Data<stripe::Client>,
     product_id: web::Path<String>,
-    inventory: web::Json<ChangeInventory>,
+    update_payload: web::Json<UpdatePayload>,
     claims: Claims
 ) -> Result<impl Responder> {
     if !claims.validate_roles(&HashSet::from(["admin".to_string()])) {
@@ -116,14 +116,17 @@ async fn update_product_inventory(
     .map_err(error::ErrorInternalServerError)?;
 
     let stripe_product_id = product_id.clone();
-    let stripe_inventory = inventory.inventory.clone();
+    let stripe_inventory = update_payload.inventory.clone();
+    let is_active = update_payload.is_active.clone();
 
     let product = products.data.into_iter().find(|product| product.id.as_str() == stripe_product_id).unwrap();
-    stripe::Product::update(&client, &product.id, stripe::UpdateProduct { 
+    
+    stripe::Product::update(&client, &product.id, stripe::UpdateProduct {
+        active: Some(is_active),
         metadata: Some(std::collections::HashMap::from([(
             String::from("inventory"),
-            String::from((stripe_inventory + db_product.inventory).to_string().as_str()),
-        )])),
+            String::from((stripe_inventory + db_product.inventory.unwrap_or(0)).to_string().as_str()),
+            )])),
         ..Default::default()
     }).await.unwrap();
 

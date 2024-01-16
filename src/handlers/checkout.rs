@@ -50,7 +50,7 @@ async fn checkout(
             let id = item.product_id.clone();
             let new_quantity = item.quantity.clone();
             let product = db_get_product_by_id(&mut conn, id).unwrap();
-            if product.inventory < new_quantity {
+            if product.inventory.unwrap_or(0) < new_quantity {
                 return Err(());
             }
             Ok(())
@@ -66,7 +66,7 @@ async fn checkout(
             let product = db_get_product_by_id(&mut conn, id).unwrap();
             let new_product = product::NewProduct{
                 id: Some(product.id.clone()),
-                inventory: Some(product.inventory - new_quantity),
+                inventory: Some(product.inventory.unwrap_or(0) - new_quantity),
                 ..Default::default()
             };
             db_update_product(&mut conn, new_product).unwrap();
@@ -173,11 +173,12 @@ async fn remove_checkoutsessions(
 
 pub(crate) async fn checkout_success(
     pool: web::Data<PgPool>,
+    client: web::Data<Client>,
     checkout_session: CheckoutSession,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let stripe_user_id = checkout_session.customer.clone().unwrap().id().to_string();
 
-    create_order(pool.clone(), checkout_session.customer.clone().unwrap().id().to_string()).await?;
+    create_order(pool.clone(), client, checkout_session.customer.clone().unwrap().id().to_string()).await?;
 
     // convert stripe id to auth0 id and then delete cart associated with auth0 id
     let cart = web::block(move || {
@@ -214,7 +215,7 @@ pub(crate) async fn checkout_expired(
             let product = db_get_product_by_id(&mut conn, id).unwrap();
             let new_product = product::NewProduct{
                 id: Some(product.id.clone()),
-                inventory: Some(product.inventory + new_quantity),
+                inventory: Some(new_quantity + product.inventory.unwrap_or(0)),
                 ..Default::default()
             };
             db_update_product(&mut conn, new_product).unwrap();

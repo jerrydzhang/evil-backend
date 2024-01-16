@@ -78,7 +78,6 @@ pub(crate) fn db_update_product(
     conn: &mut PgConnection,
     new_product: NewProduct,
 ) -> Result<Product, Error> {
-
     diesel::update(products.find(new_product.id.clone().unwrap()))
         .set(&new_product)
         .get_result::<Product>(conn)?;

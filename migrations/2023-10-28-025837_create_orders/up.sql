@@ -1,4 +1,6 @@
 -- Your SQL goes here
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
 CREATE TABLE orders (
     id VARCHAR NOT NULL DEFAULT concat('order-', uuid_generate_v4()) PRIMARY KEY,
     user_id VARCHAR NOT NULL REFERENCES users(id),

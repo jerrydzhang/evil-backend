@@ -1,6 +1,7 @@
 use actix_web::{get, web, Responder, Result, HttpResponse, error, post};
+use stripe::{Product, Client};
 
-use crate::{models::{dbpool::PgPool, order::{Order, NewOrder}}, database::{orders::{db_get_all_orders, db_create_order, db_get_order_by_id, db_update_order, db_delete_order, db_get_expanded_orders}, carts::db_get_cart_items_by_user_id, users::db_user_stripe_to_user_id}};
+use crate::{models::{dbpool::PgPool, order::{Order, NewOrder}, product}, database::{orders::{db_get_all_orders, db_create_order, db_get_order_by_id, db_update_order, db_delete_order, db_get_expanded_orders, db_get_expanded_order_by_id}, carts::db_get_cart_items_by_user_id, users::db_user_stripe_to_user_id, products::db_get_product_by_id}};
 
 #[get("")]
 async fn get_orders(
@@ -28,7 +29,7 @@ async fn get_order_by_id(
 
     let order = web::block(move || {
         let mut conn = pool.get().unwrap();
-        db_get_order_by_id(&mut conn, id.to_string())
+        db_get_expanded_order_by_id(&mut conn, id.to_string())
     })
     .await?
     .map_err(error::ErrorInternalServerError)?;
@@ -130,8 +131,13 @@ async fn delete_order(
 
 pub(crate) async fn create_order(
     pool: web::Data<PgPool>,
+    client: web::Data<Client>,
     user: String,
 ) -> Result<(), Box<dyn std::error::Error>> {
+
+    let pool_clone = pool.clone();
+    let user_clone = user.clone();
+
     web::block(move || {
         let mut conn = pool.get().unwrap();
         let user = db_user_stripe_to_user_id(&mut conn, user)?.unwrap();
@@ -149,10 +155,51 @@ pub(crate) async fn create_order(
             ..Default::default()
         };
 
+        log::info!("new_order: {:?}", order);
+
         db_create_order(&mut conn, order)
     })
     .await?
     .map_err(error::ErrorInternalServerError)?;
+
+    // let new_products = web::block(move || {
+    //     let mut conn = pool_clone.get().unwrap();
+    //     let user = db_user_stripe_to_user_id(&mut conn, user_clone).unwrap().unwrap();
+    //     let cart_items = db_get_cart_items_by_user_id(&mut conn, user.clone().id).unwrap().unwrap();
+
+    //     cart_items.iter().map(|item| {
+    //         let id = item.product_id.clone();
+    //         let new_quantity = item.quantity.clone();
+    //         let product = db_get_product_by_id(&mut conn, id).unwrap();
+    //         let new_product = product::NewProduct{
+    //             id: Some(product.id.clone()),
+    //             inventory: Some(product.inventory - new_quantity),
+    //             ..Default::default()
+    //         };
+    //         new_product
+    //     }).collect::<Vec<product::NewProduct>>()
+    // })
+    // .await?;
+
+    // for product in new_products {
+    //     let stripe_product_id = product.id.clone().unwrap();
+    //     let stripe_inventory = product.inventory.clone().unwrap();
+
+    //     let product = web::block(move || {
+    //         let mut conn = pool_clone.get().unwrap();
+    //         db_get_product_by_id(&mut conn, stripe_product_id.clone())
+    //     })
+    //     .await?
+    //     .map_err(error::ErrorInternalServerError)?;
+
+    //     stripe::Product::update(&client, Product::, stripe::UpdateProduct {
+    //         metadata: Some(std::collections::HashMap::from([(
+    //             String::from("inventory"),
+    //             String::from((stripe_inventory).to_string().as_str()),
+    //         )])),
+    //         ..Default::default()
+    //     }).await.unwrap();
+    // }
 
     Ok(())
 }

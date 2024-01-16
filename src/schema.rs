@@ -27,7 +27,7 @@ diesel::table! {
         description -> Nullable<Varchar>,
         category -> Nullable<Varchar>,
         price -> Nullable<Numeric>,
-        inventory -> Int4,
+        inventory -> Nullable<Int4>,
         last_updated -> Nullable<Timestamp>,
         created_at -> Nullable<Timestamp>,
         images -> Nullable<Array<Nullable<Text>>>,
