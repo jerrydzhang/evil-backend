@@ -13,6 +13,8 @@ pub(crate) struct Order {
     pub(crate) user_id: String,
     pub(crate) products: serde_json::Value,
     pub(crate) status: String,
+    pub(crate) name: String,
+    pub(crate) address: String,
     pub(crate) created_at: chrono::NaiveDateTime,
     pub(crate) updated_at: chrono::NaiveDateTime,
 }
@@ -24,6 +26,8 @@ pub(crate) struct NewOrder {
     pub(crate) user_id: Option<String>,
     pub(crate) products: Option<serde_json::Value>,
     pub(crate) status: Option<String>,
+    pub(crate) name: Option<String>,
+    pub(crate) address: Option<String>,
     pub(crate) created_at: Option<chrono::NaiveDateTime>,
     pub(crate) updated_at: Option<chrono::NaiveDateTime>,
 }
@@ -34,6 +38,8 @@ pub(crate) struct ExpandedOrder {
     pub(crate) user_id: String,
     pub(crate) products: Vec<OrderProduct>,
     pub(crate) status: String,
+    pub(crate) name: String,
+    pub(crate) address: String,
     pub(crate) created_at: chrono::NaiveDateTime,
     pub(crate) updated_at: chrono::NaiveDateTime,
 }
@@ -48,6 +54,8 @@ impl ExpandedOrder{
             user_id: order.user_id,
             products: products,
             status: order.status,
+            name: order.name,
+            address: order.address,
             created_at: order.created_at,
             updated_at: order.updated_at,
         }

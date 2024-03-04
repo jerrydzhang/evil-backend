@@ -178,7 +178,22 @@ pub(crate) async fn checkout_success(
 ) -> Result<(), Box<dyn std::error::Error>> {
     let stripe_user_id = checkout_session.customer.clone().unwrap().id().to_string();
 
-    create_order(pool.clone(), client, checkout_session.customer.clone().unwrap().id().to_string()).await?;
+    let address = {
+        checkout_session.shipping_details.clone().unwrap().address.clone().unwrap().line1.clone().unwrap_or("".to_string()) + ", " +
+        &checkout_session.shipping_details.clone().unwrap().address.clone().unwrap().line2.clone().unwrap_or("".to_string()) + ", " +
+        &checkout_session.shipping_details.clone().unwrap().address.clone().unwrap().city.clone().unwrap_or("".to_string()) + " " +
+        &checkout_session.shipping_details.clone().unwrap().address.clone().unwrap().state.clone().unwrap_or("".to_string()) + " " +
+        &checkout_session.shipping_details.clone().unwrap().address.clone().unwrap().postal_code.clone().unwrap_or("".to_string()) + " " +
+        &checkout_session.shipping_details.clone().unwrap().address.clone().unwrap().country.clone().unwrap_or("".to_string())
+    };
+
+    create_order(
+        pool.clone(), 
+        client, 
+        checkout_session.customer.clone().unwrap().id().to_string(),
+        checkout_session.shipping_details.clone().unwrap().name.clone().unwrap_or("".to_string()),
+        address,
+    ).await?;
 
     // convert stripe id to auth0 id and then delete cart associated with auth0 id
     let cart = web::block(move || {
@@ -192,7 +207,7 @@ pub(crate) async fn checkout_success(
     .await?
     .map_err(error::ErrorInternalServerError)?;
 
-    log::info!("deleted {} cart items for user {}", cart, checkout_session.customer.unwrap().id().to_string());
+    log::info!("deleted {:?} cart items for user {}", cart, checkout_session.customer.unwrap().id().to_string());
     Ok(())
 }
 

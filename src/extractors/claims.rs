@@ -4,9 +4,9 @@ use actix_web::{FromRequest, Error};
 use actix_web_httpauth::extractors::bearer::BearerAuth;
 use cached::proc_macro::cached;
 use jsonwebtoken::{jwk::{self, AlgorithmParameters}, decode_header, DecodingKey, Validation, decode, TokenData};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub(crate) struct Claims {
     #[serde(rename = "https://localhost:8080/roles")]
     roles: Option<HashSet<String>>,
@@ -46,7 +46,7 @@ impl FromRequest for Claims {
     }
 }
 
-// verify a jwt token
+/// verify a jwt token
 pub(crate) async fn verify_jwt(token: &str) -> Result<TokenData<Claims>, Box<dyn std::error::Error>> {
 
     // get the jwks from auth0
@@ -79,7 +79,7 @@ pub(crate) async fn verify_jwt(token: &str) -> Result<TokenData<Claims>, Box<dyn
     }
 }
 
-// get and cache jwks from auth0 website
+/// get and cache jwks from auth0 website
 #[cached(size=1, time = 1200, result = true)]
 async fn get_jwks() -> Result<jwk::JwkSet, Box<dyn std::error::Error>> {
     let uri = std::env::var("AUTH0_JWKS").expect("AUTH0_JWKS should be set");

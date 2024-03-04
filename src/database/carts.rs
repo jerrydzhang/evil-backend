@@ -1,5 +1,5 @@
 use diesel::result::Error;
-use diesel::{PgConnection, QueryDsl, RunQueryDsl, ExpressionMethods};
+use diesel::{BoolExpressionMethods, ExpressionMethods, PgConnection, QueryDsl, RunQueryDsl};
 
 use crate::models::cart::{CartItem, NewCartItem};
 use crate::schema::carts::dsl::*;
@@ -28,10 +28,11 @@ pub(crate) fn db_create_cart_item (
 
 pub(crate) fn db_update_cart_item (
     conn: &mut PgConnection,
-    cart_item_id: i32,
+    input_user_id: String,
+    input_product_id: String,
     new_quantity: i32,
 ) -> Result<CartItem, Error> {
-    let cart_item = diesel::update(carts.find(cart_item_id))
+    let cart_item = diesel::update(carts.find((input_user_id, input_product_id)))
         .set(quantity.eq(new_quantity))
         .get_result::<CartItem>(conn)?;
 
@@ -42,7 +43,7 @@ pub(crate) fn db_update_cart_item_from_cart (
     conn: &mut PgConnection,
     new_cart: NewCartItem,
 ) -> Result<CartItem, Error> {
-    let cart_item = diesel::update(carts.filter(user_id.eq(new_cart.user_id)).filter(product_id.eq(new_cart.product_id)))
+    let cart_item = diesel::update(carts.filter(user_id.eq(new_cart.user_id).and(product_id.eq(new_cart.product_id))))
         .set(quantity.eq(new_cart.quantity))
         .get_result::<CartItem>(conn)?;
 
@@ -51,9 +52,10 @@ pub(crate) fn db_update_cart_item_from_cart (
 
 pub(crate) fn db_delete_cart_item (
     conn: &mut PgConnection,
-    cart_item_id: i32,
+    input_user_id: String,
+    input_product_id: String, 
 ) -> Result<usize, Error> {
-    let deleted_cart_item = diesel::delete(carts.find(cart_item_id))
+    let deleted_cart_item = diesel::delete(carts.find((input_user_id, input_product_id)))
         .execute(conn)?;
 
     Ok(deleted_cart_item)

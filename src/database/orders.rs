@@ -98,6 +98,43 @@ pub(crate) fn db_get_orders_by_user_id(
     Ok(Some(orders_by_user_id))
 }
 
+pub(crate) fn db_get_expanded_orders_by_user_id(
+    conn: &mut PgConnection,
+    user: String,
+) -> Result<Option<Vec<ExpandedOrder>>, Error> {
+    let orders_by_user_id = orders
+        .filter(user_id.eq(user))
+        .load::<Order>(conn)?;
+
+    match orders_by_user_id.len() {
+        0 => return Ok(None),
+        _ => (),
+    }
+
+    let expanded_orders = orders_by_user_id.iter()
+        .map(|order| {
+            let product_ids = order.products.as_object().unwrap();
+            let expanded_products = product_ids.iter()
+                .map(|(product_id, quantity)| {
+                    let product = db_expand_products(conn, vec![product_id.to_string()]).unwrap();
+                    let product = product.first().unwrap();
+                    let product = product.clone();
+                    let quantity = quantity.as_i64().unwrap() as i32;
+                    OrderProduct::new(product, quantity)
+                })
+                .collect::<Vec<OrderProduct>>();
+    
+            ExpandedOrder::new(order.clone(), expanded_products)
+        })
+        .map(Result::Ok)
+        .collect::<Vec<Result<ExpandedOrder, Error>>>();
+    
+    let expanded_orders = expanded_orders.into_iter()
+        .collect::<Result<Vec<ExpandedOrder>, Error>>()?;
+
+    Ok(Some(expanded_orders))
+}
+
 pub(crate) fn db_create_order(
     conn: &mut PgConnection,
     new_order: NewOrder,

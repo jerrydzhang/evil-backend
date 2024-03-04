@@ -20,6 +20,7 @@ pub(crate) struct Product {
     pub(crate) images: Option<Vec<Option<String>>>,
     pub(crate) price_id: Option<String>,
     pub(crate) active: bool,
+    pub(crate) variant_id: i32,
 }
 
 impl Product {
@@ -46,6 +47,10 @@ impl Product {
             }),
             price_id: None,
             active: stripe_product.active.unwrap(),
+            variant_id: match stripe_product.metadata.clone() {
+                Some(metadata) => Some(metadata.get("variant_id").map(|s| s.parse::<i32>().unwrap()).unwrap_or(0)),
+                None => None,
+            }.unwrap_or(0),
         }
     }
 }
@@ -64,6 +69,7 @@ pub(crate) struct NewProduct {
     pub(crate) images: Option<Vec<Option<String>>>,
     pub(crate) price_id: Option<String>,
     pub(crate) active: Option<bool>,
+    pub(crate) variant_id: Option<i32>,
 }
 
 impl NewProduct {
@@ -93,6 +99,13 @@ impl NewProduct {
             }),
             price_id: None,
             active: Some(stripe_product.active.unwrap()),
+            variant_id: match stripe_product.metadata.clone() {
+                Some(metadata) => match metadata.get("variant_id").map(|s| s.parse::<i32>().unwrap()) {
+                    Some(variant_id) => Some(variant_id),
+                    None => None,
+                },
+                None => None,
+            },
         }
     }
 }
@@ -103,8 +116,22 @@ pub(crate) struct ProductIds {
     pub(crate) ids: String,
 }
 
+#[derive(Debug, Deserialize, Clone)]
+pub(crate) struct NewProductPayload {
+    pub(crate) name: String,
+    pub(crate) inventory: i32,
+    pub(crate) description: Option<String>,
+    pub(crate) image: String,
+    pub(crate) category: String,
+    pub(crate) price: BigDecimal,
+    pub(crate) variant_id: i32,
+}
+
 #[derive(Debug, Deserialize)]
 pub(crate) struct UpdatePayload {
+    pub(crate) name: String,
     pub(crate) inventory: i32,
+    pub(crate) description: String,
+    pub(crate) images: Vec<String>,
     pub(crate) is_active: bool,
 }

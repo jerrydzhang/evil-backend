@@ -1,26 +1,20 @@
 use actix_web::{get, web, HttpResponse, Responder, Result, error, post, put};
-use serde::Deserialize;
 
 use crate::extractors::claims::Claims;
 use crate::models::cart::{CartSubmit, NewCartItem};
 use crate::models::dbpool::PgPool;
 use crate::database::carts::{db_get_cart_items_by_user_id, db_update_cart_item, db_create_cart_item, db_delete_cart_item, db_update_cart_item_from_cart};
 
-#[derive(Deserialize)]
-pub(crate) struct Info {
-    user: String,
-}
 
 #[get("")]
 pub(crate) async fn get_cart_items(
     pool: web::Data<PgPool>,
-    info: web::Query<Info>,
-    _claims: Claims,
+    claims: Claims,
 ) -> Result<impl Responder> {
     let cart_items = web::block(move || {
         let mut conn = pool.get().unwrap();
 
-        db_get_cart_items_by_user_id(&mut conn, info.user.clone())
+        db_get_cart_items_by_user_id(&mut conn, claims.sub)
     })
     .await?
     .map_err(error::ErrorInternalServerError)?;
@@ -55,6 +49,7 @@ pub(crate) async fn update_cart_item(
 ) ->  Result<impl Responder> {
     let cart_items = web::block(move || {
         let mut conn = pool.get().unwrap();
+        
         db_update_cart_item_from_cart(&mut conn, new_cart.into_inner())
     })
     .await?
@@ -93,9 +88,9 @@ pub(crate) async fn update_cart(
 
                         let new_quantity = cart.get(&cart_item.product_id).unwrap();
 
-                        db_update_cart_item(&mut conn, cart_item.id, *new_quantity)?;
+                        db_update_cart_item(&mut conn, user_id.clone(), cart_item.product_id.clone(), *new_quantity)?;
                     } else {
-                        db_delete_cart_item(&mut conn, cart_item.id)?;
+                        db_delete_cart_item(&mut conn, user_id.clone(), cart_item.product_id.clone())?;
                     }
                 }
 

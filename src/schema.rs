@@ -1,8 +1,7 @@
 // @generated automatically by Diesel CLI.
 
 diesel::table! {
-    carts (id) {
-        id -> Int4,
+    carts (user_id, product_id) {
         user_id -> Varchar,
         product_id -> Varchar,
         quantity -> Int4,
@@ -15,6 +14,8 @@ diesel::table! {
         user_id -> Varchar,
         products -> Jsonb,
         status -> Varchar,
+        name -> Varchar,
+        address -> Varchar,
         created_at -> Timestamp,
         updated_at -> Timestamp,
     }
@@ -33,6 +34,7 @@ diesel::table! {
         images -> Nullable<Array<Nullable<Text>>>,
         price_id -> Nullable<Varchar>,
         active -> Bool,
+        variant_id -> Int4,
     }
 }
 

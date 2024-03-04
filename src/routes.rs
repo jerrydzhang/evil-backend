@@ -2,11 +2,7 @@ use actix_web::web::{self};
 
 use crate::{handlers::{
 products::{
-    get_all_products,
-    get_product_by_id, 
-    get_multiple_products_by_id,
-    get_products_by_category, 
-    update_product_inventory, 
+    create_product, get_active_products, get_active_products_by_category, get_all_products, get_multiple_products_by_id, get_product_by_id, get_product_by_name, get_products_by_category, update_product_inventory 
 }, 
 users::{
     create_user, 
@@ -20,7 +16,7 @@ carts::{
     update_cart,
     add_to_cart,
     update_cart_item
-}, checkout::{checkout, cancel_checkout}, orders::{get_orders, get_order_by_id, update_order, update_order_status, delete_order, create_order_handler, get_expanded_orders}, }, stripe::webhook::webhook_handler};
+}, checkout::{checkout, cancel_checkout}, orders::{create_order_handler, delete_order, get_expanded_orders, get_expanded_orders_by_user_id, get_order_by_id, get_orders, update_order, update_order_status}, }, stripe::webhook::webhook_handler};
 
 pub(crate) fn routes(cfg: &mut web::ServiceConfig) {
     cfg
@@ -38,11 +34,14 @@ pub(crate) fn routes(cfg: &mut web::ServiceConfig) {
                 // products
                 web::scope("/product")
                 .service(get_all_products)
+                .service(get_active_products)
+                .service(get_product_by_name)
                 .service(get_multiple_products_by_id)
                 .service(get_product_by_id)
                 .service(get_products_by_category)
+                .service(get_active_products_by_category)
                 .service(update_product_inventory)
-                // .service(create_product)
+                .service(create_product)
                 // .service(update_product)
                 // .service(delete_product)
             )
@@ -68,6 +67,7 @@ pub(crate) fn routes(cfg: &mut web::ServiceConfig) {
                 .service(get_orders)
                 .service(get_order_by_id)
                 .service(get_expanded_orders)
+                .service(get_expanded_orders_by_user_id)
                 .service(create_order_handler)
                 .service(update_order)
                 .service(update_order_status)

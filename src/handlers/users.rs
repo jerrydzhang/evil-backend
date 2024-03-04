@@ -72,7 +72,6 @@ async fn get_user(
     }
 
     let user = web::block(move || {
-
         let mut conn = pool.get().unwrap();
 
         db_get_user(&mut conn, user_id.id.clone())
@@ -87,5 +86,5 @@ async fn get_user(
 async fn index(
     claims: Claims,
 ) -> Result<impl Responder> {
-    Ok(HttpResponse::Ok().json(claims.sub))
+    Ok(HttpResponse::Ok().json(claims))
 }

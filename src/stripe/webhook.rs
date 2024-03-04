@@ -3,7 +3,7 @@ use std::borrow::Borrow;
 use actix_web::{post, HttpRequest, web, HttpResponse, Responder, Result};
 use stripe::{Webhook, EventType, EventObject, Client};
 
-use crate::{models::dbpool::PgPool, handlers::{products::{create_product, change_price, update_product, delete_product}, checkout::{checkout_success, checkout_expired}}};
+use crate::{models::dbpool::PgPool, handlers::{products::{create_backend_product, change_price, update_product, delete_product}, checkout::{checkout_success, checkout_expired}}};
 
 #[post("stripe_webhooks")]
 pub async fn webhook_handler(
@@ -20,7 +20,7 @@ pub async fn webhook_handler(
 pub async fn handle_webhook(
     pool: web::Data<PgPool>,
     client: web::Data<Client>,
-    req: HttpRequest, 
+    req: HttpRequest,
     payload: web::Bytes,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let payload_str = std::str::from_utf8(payload.borrow()).unwrap();
@@ -31,7 +31,7 @@ pub async fn handle_webhook(
         match event.type_ {
             EventType::ProductCreated => {
                 if let EventObject::Product(product) = event.data.object {
-                    create_product(pool, product).await?;
+                    create_backend_product(pool, product).await?;
                 }
             }
             EventType::ProductUpdated => {

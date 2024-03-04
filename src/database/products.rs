@@ -1,5 +1,5 @@
 use diesel::result::Error;
-use diesel::{PgConnection, RunQueryDsl, QueryDsl, ExpressionMethods};
+use diesel::{ExpressionMethods, PgConnection, PgTextExpressionMethods, QueryDsl, RunQueryDsl};
 
 use crate::models::product::{Product, NewProduct};
 use crate::schema::products::dsl::*;
@@ -16,13 +16,38 @@ pub(crate) fn db_get_all_products(
     Ok(Some(all_products))
 }
 
+pub(crate) fn db_get_active_products(
+    conn: &mut PgConnection,
+) -> Result<Option<Vec<Product>>, Error> {
+    // do a left join of products and catagories
+    let all_products = products
+        .filter(active.eq(true))
+        .load::<Product>(conn)?;
+
+    Ok(Some(all_products))
+}
+
+pub(crate) fn db_get_product_by_name(
+    conn: &mut PgConnection,
+    product_name: String,
+) -> Result<Option<Vec<Product>>, Error> {
+    // do an innerjoin of the product and its corresponding category
+    let all_products = products
+        .filter(active.eq(true))
+        .filter(name.ilike(product_name))
+        .load::<Product>(conn)?;
+    
+    // return the display product
+    Ok(Some(all_products))
+}
+
 pub(crate) fn db_get_product_by_id(
     conn: &mut PgConnection,
     product_id: String,
 ) -> Result<Product, Error> {
     // do an innerjoin of the product and its corresponding category
     let product = products
-        .find(product_id)
+        .filter(id.eq(product_id))
         .first::<Product>(conn)?;
     
     // return the display product
@@ -47,6 +72,18 @@ pub(crate) fn db_get_products_by_category(
 ) -> Result<Option<Vec<Product>>, Error> {
     let products_with_category = products
         .filter(category.eq(category_name))
+        .load::<Product>(conn)?;
+
+    Ok(Some(products_with_category))
+}
+
+pub(crate) fn db_get_active_products_by_category(
+    conn: &mut PgConnection,
+    category_name: String,
+) -> Result<Option<Vec<Product>>, Error> {
+    let products_with_category = products
+        .filter(category.eq(category_name))
+        .filter(active.eq(true))
         .load::<Product>(conn)?;
 
     Ok(Some(products_with_category))
@@ -78,6 +115,8 @@ pub(crate) fn db_update_product(
     conn: &mut PgConnection,
     new_product: NewProduct,
 ) -> Result<Product, Error> {
+    log::info!("new_product: {:?}", new_product);
+
     diesel::update(products.find(new_product.id.clone().unwrap()))
         .set(&new_product)
         .get_result::<Product>(conn)?;
