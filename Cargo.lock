@@ -338,9 +338,9 @@ dependencies = [
 
 [[package]]
 name = "async-stripe"
-version = "0.25.2"
+version = "0.34.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e1b39347f478f57a40cbaf82cbaebb4a350acc757cda30fc7ff88707a11d1d81"
+checksum = "109605d984dd71a9a278e2d43a2831a20e80f25c3bcc25174096d12352cfc469"
 dependencies = [
  "chrono",
  "futures-util",
@@ -358,7 +358,6 @@ dependencies = [
  "smol_str",
  "thiserror",
  "tokio",
- "uuid",
 ]
 
 [[package]]
@@ -2308,15 +2307,6 @@ dependencies = [
  "idna",
  "percent-encoding",
  "serde",
-]
-
-[[package]]
-name = "uuid"
-version = "0.8.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bc5cf98d8186244414c848017f0e2676b3fcb46807f6668a97dfe67359a3c4b7"
-dependencies = [
- "getrandom 0.2.10",
 ]
 
 [[package]]

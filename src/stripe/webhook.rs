@@ -3,7 +3,7 @@ use std::borrow::Borrow;
 use actix_web::{post, HttpRequest, web, HttpResponse, Responder, Result};
 use stripe::{Webhook, EventType, EventObject, Client};
 
-use crate::{models::dbpool::PgPool, handlers::{products::{create_backend_product, change_price, update_product, delete_product}, checkout::{checkout_success, checkout_expired}}};
+use crate::{models::dbpool::PgPool, handlers::{products::{wh_create_product, wh_change_price, wh_update_product, wh_delete_product}, checkout::{checkout_success, checkout_expired}}};
 
 #[post("stripe_webhooks")]
 pub async fn webhook_handler(
@@ -31,22 +31,22 @@ pub async fn handle_webhook(
         match event.type_ {
             EventType::ProductCreated => {
                 if let EventObject::Product(product) = event.data.object {
-                    create_backend_product(pool, product).await?;
+                    wh_create_product(pool, product).await?;
                 }
             }
             EventType::ProductUpdated => {
                 if let EventObject::Product(product) = event.data.object {
-                    update_product(pool, product).await?;
+                    wh_update_product(pool, product).await?;
                 }
             }
             EventType::ProductDeleted => {
                 if let EventObject::Product(product) = event.data.object {
-                    delete_product(pool, product).await?;
+                    wh_delete_product(pool, product).await?;
                 }
             }
             EventType::PriceCreated | EventType::PriceUpdated => {
                 if let EventObject::Price(price) = event.data.object {
-                    change_price(pool, price).await?;
+                    wh_change_price(pool, price).await?;
                 }
             }
             EventType::CheckoutSessionCompleted => {

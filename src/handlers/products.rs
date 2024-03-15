@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use actix_web::{get, post, Responder, Result, web, error, HttpResponse, put};
+use actix_web::{delete, error, get, post, put, web, HttpResponse, Responder, Result};
 use bigdecimal::{BigDecimal, FromPrimitive, ToPrimitive};
 use stripe::Object;
 
@@ -190,7 +190,7 @@ async fn create_product(
 
 
 #[put("/update/{id}")]
-async fn update_product_inventory(
+async fn update_product(
     pool: web::Data<PgPool>,
     client: web::Data<stripe::Client>,
     product_id: web::Path<String>,
@@ -235,7 +235,30 @@ async fn update_product_inventory(
     Ok(HttpResponse::Ok().json(product))
 }
 
-pub(crate) async fn create_backend_product(
+#[delete("/delete/{id}")]
+async fn delete_product(
+    client: web::Data<stripe::Client>,
+    product_id: web::Path<String>,
+    claims: Claims
+) -> Result<impl Responder> {
+    if !claims.validate_roles(&HashSet::from(["admin".to_string()])) {
+        return Ok(HttpResponse::Unauthorized().finish());
+    };
+
+    let products = stripe::Product::list(&client, &stripe::ListProducts{
+        ids: Some(vec![product_id.clone()]),
+        ..Default::default()
+    }).await.unwrap();
+
+    let product_id = product_id.into_inner();
+    let product = products.data.into_iter().find(|product| product.id.as_str() == product_id).unwrap();
+
+    stripe::Product::delete(&client, &product.id).await.unwrap();
+
+    Ok(HttpResponse::Ok().finish())
+}
+
+pub(crate) async fn wh_create_product(
     pool: web::Data<PgPool>,
     stripe_product: stripe::Product,
 ) -> Result<(), Box<dyn std::error::Error>> {
@@ -251,7 +274,7 @@ pub(crate) async fn create_backend_product(
     Ok(())
 }
 
-pub(crate) async fn update_product(
+pub(crate) async fn wh_update_product(
     pool: web::Data<PgPool>,
     stripe_product: stripe::Product,
 ) -> Result<(), Box<dyn std::error::Error>> {
@@ -266,7 +289,7 @@ pub(crate) async fn update_product(
     Ok(())
 }
 
-pub(crate) async fn delete_product(
+pub(crate) async fn wh_delete_product(
     pool: web::Data<PgPool>,
     stripe_product: stripe::Product,
 ) -> Result<(), Box<dyn std::error::Error>> {
@@ -281,7 +304,7 @@ pub(crate) async fn delete_product(
     Ok(())
 }
 
-pub(crate) async fn change_price(
+pub(crate) async fn wh_change_price(
     pool: web::Data<PgPool>,
     stripe_price: stripe::Price,
 ) -> Result<(), Box<dyn std::error::Error>> {

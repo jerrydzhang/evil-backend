@@ -96,7 +96,8 @@ async fn checkout(
         let success_url = format!("{}/checkout-approved", frontend_url);
         let cancel_url = format!("{}/checkout-canceled", frontend_url);
 
-        let mut params = stripe::CreateCheckoutSession::new(&success_url);
+        let mut params = stripe::CreateCheckoutSession::new();
+        params.success_url = Some(&success_url);
         params.cancel_url = Some(&cancel_url);
         params.customer = Some(customer.id);
         params.mode = Some(CheckoutSessionMode::Payment);

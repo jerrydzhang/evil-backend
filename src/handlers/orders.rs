@@ -1,7 +1,7 @@
 use actix_web::{get, web, Responder, Result, HttpResponse, error, post};
 use stripe::{Client, Product};
 
-use crate::{models::{dbpool::PgPool, order::{Order, NewOrder}, product}, database::{orders::{db_create_order, db_delete_order, db_get_all_orders, db_get_expanded_order_by_id, db_get_expanded_orders, db_get_expanded_orders_by_user_id, db_get_order_by_id, db_update_order}, carts::db_get_cart_items_by_user_id, users::db_user_stripe_to_user_id, products::db_get_product_by_id}};
+use crate::{models::{dbpool::PgPool, order::{NewOrder}}, database::{orders::{db_create_order, db_delete_order, db_get_all_orders, db_get_expanded_order_by_id, db_get_expanded_orders, db_get_expanded_orders_by_user_id, db_update_order}, carts::db_get_cart_items_by_user_id, users::db_user_stripe_to_user_id}};
 
 #[get("")]
 async fn get_orders(

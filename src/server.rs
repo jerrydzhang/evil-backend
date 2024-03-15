@@ -17,7 +17,7 @@ pub(crate) async fn server() -> std::io::Result<()> {
             // CORS
             .wrap(
                 Cors::default()
-                    .allow_any_origin()
+                    .allowed_origin(std::env::var("CLIENT_URL").expect("CLIENT_URL should be set").as_str())
                     .allow_any_method()
                     .allow_any_header()      
                     .supports_credentials()
