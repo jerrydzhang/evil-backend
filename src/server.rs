@@ -1,7 +1,10 @@
 use actix_cors::Cors;
 use actix_web::{App, HttpServer, middleware::Logger, web};
+use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 
 use crate::{routes::routes, database::init_db::initialize_db_pool};
+
+pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!();
 
 pub(crate) async fn server() -> std::io::Result<()> {
     std::env::set_var("RUST_LOG", "debug");
@@ -10,6 +13,10 @@ pub(crate) async fn server() -> std::io::Result<()> {
     dotenv::dotenv().ok();
 
     let pool = initialize_db_pool();
+
+    let conn = &mut *pool.get().unwrap();
+    conn.run_pending_migrations(MIGRATIONS).unwrap();
+
     let stripe_client = stripe::Client::new(std::env::var("STRIPE_SECRET_KEY").expect("STRIPE_SECRET_KEY should be set"));
 
     HttpServer::new(move || {

@@ -4,6 +4,7 @@ use diesel::{
 };
 use crate::models::dbpool::PgPool;
 
+
 // wrap database connection in r2d2 connection manager to allow for connection pooling
 pub(crate) fn initialize_db_pool() -> PgPool {
     let conn_spec = std::env::var("DATABASE_URL").expect("DATABASE_URL should be set");

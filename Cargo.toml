@@ -16,6 +16,7 @@ cached = { version = "0.46.0", features = ["async"] }
 chrono = { version = "0.4.31", features = ["serde"] }
 derive_more = "0.99.17"
 diesel = { version = "2.1.2", features = ["postgres", "r2d2", "chrono", "numeric", "serde_json"] }
+diesel_migrations = "2.1.0"
 dotenv = "0.15.0"
 env_logger = "0.10.0"
 jsonwebtoken = "8.3.0"
