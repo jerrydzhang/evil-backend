@@ -4,9 +4,11 @@ use actix_web::{delete, error, get, post, put, web, HttpResponse, Responder, Res
 use bigdecimal::{BigDecimal, FromPrimitive, ToPrimitive};
 use stripe::Object;
 
-
 use crate::database::products::{
-    db_create_product, db_delete_product, db_get_active_products, db_get_active_products_by_category, db_get_all_products, db_get_multiple_products_by_id, db_get_product_by_id, db_get_product_by_name, db_get_products_by_category, db_update_product
+    db_create_product, db_delete_product, db_get_active_products,
+    db_get_active_products_by_category, db_get_all_products, db_get_categories,
+    db_get_multiple_products_by_id, db_get_product_by_id, db_get_product_by_name,
+    db_get_products_by_category, db_update_product,
 };
 use crate::extractors::claims::Claims;
 use crate::models::dbpool::PgPool;
@@ -14,15 +16,12 @@ use crate::models::product::{self, NewProductPayload, ProductIds, UpdatePayload}
 
 // returns all products in the database
 #[get("")]
-async fn get_all_products(
-    pool: web::Data<PgPool>,
-) -> Result<impl Responder> {
+async fn get_all_products(pool: web::Data<PgPool>) -> Result<impl Responder> {
     // block the current thread until the async operation is complete
     let products = web::block(move || {
-
         // get a connection from the pool
         let mut conn = pool.get().unwrap();
-        
+
         // pass the connection to the database function
         db_get_all_products(&mut conn)
     })
@@ -33,9 +32,7 @@ async fn get_all_products(
 }
 
 #[get("/active")]
-async fn get_active_products(
-    pool: web::Data<PgPool>,
-) -> Result<impl Responder> {
+async fn get_active_products(pool: web::Data<PgPool>) -> Result<impl Responder> {
     let products = web::block(move || {
         let mut conn = pool.get().unwrap();
         db_get_active_products(&mut conn)
@@ -71,7 +68,11 @@ async fn get_multiple_products_by_id(
     info: web::Query<ProductIds>,
 ) -> Result<impl Responder> {
     // parse the query string into a vector of Strings
-    let ids = info.ids.split(",").map(|id| id.parse::<String>().unwrap()).collect::<Vec<String>>();
+    let ids = info
+        .ids
+        .split(",")
+        .map(|id| id.parse::<String>().unwrap())
+        .collect::<Vec<String>>();
 
     let products = web::block(move || {
         let mut conn = pool.get().unwrap();
@@ -100,6 +101,18 @@ async fn get_product_by_id(
     .map_err(error::ErrorInternalServerError)?;
 
     Ok(HttpResponse::Ok().json(product))
+}
+
+#[get("/category")]
+async fn get_all_categories(pool: web::Data<PgPool>) -> Result<impl Responder> {
+    let categories = web::block(move || {
+        let mut conn = pool.get().unwrap();
+        db_get_categories(&mut conn)
+    })
+    .await?
+    .map_err(error::ErrorInternalServerError)?;
+
+    Ok(HttpResponse::Ok().json(categories))
 }
 
 #[get("/category/{category}")]
@@ -161,13 +174,15 @@ async fn create_product(
         (
             String::from("inventory"),
             String::from(new_product_payload.inventory.to_string().as_str()),
-        ), (
+        ),
+        (
             String::from("variant_id"),
             String::from(new_product_payload.variant_id.to_string().as_str()),
-        ), (
+        ),
+        (
             String::from("category"),
             String::from(new_product_payload.category.clone()),
-        )
+        ),
     ]));
 
     log::info!("new_product: {:?}", new_product);
@@ -182,12 +197,11 @@ async fn create_product(
     stripe::Price::create(&client, stripe_price).await.unwrap();
 
     // stripe::Product::update(client, stripe_product.id(), stripe::UpdateProduct {
-    //     default_price: 
+    //     default_price:
     //     ..Default::default()
     // }).await.unwrap();
     return Ok(HttpResponse::Ok().finish());
 }
-
 
 #[put("/update/{id}")]
 async fn update_product(
@@ -195,16 +209,21 @@ async fn update_product(
     client: web::Data<stripe::Client>,
     product_id: web::Path<String>,
     update_payload: web::Json<UpdatePayload>,
-    claims: Claims
+    claims: Claims,
 ) -> Result<impl Responder> {
     if !claims.validate_roles(&HashSet::from(["admin".to_string()])) {
         return Ok(HttpResponse::Unauthorized().finish());
     };
 
-    let products = stripe::Product::list(&client, &stripe::ListProducts{
-        ids: Some(vec![product_id.clone()]),
-        ..Default::default()
-    }).await.unwrap();
+    let products = stripe::Product::list(
+        &client,
+        &stripe::ListProducts {
+            ids: Some(vec![product_id.clone()]),
+            ..Default::default()
+        },
+    )
+    .await
+    .unwrap();
 
     let db_product_id = product_id.clone();
     let db_product = web::block(move || {
@@ -218,19 +237,33 @@ async fn update_product(
     let stripe_inventory = update_payload.inventory.clone();
     let is_active = update_payload.is_active.clone();
 
-    let product = products.data.into_iter().find(|product| product.id.as_str() == stripe_product_id).unwrap();
-    
-    stripe::Product::update(&client, &product.id, stripe::UpdateProduct {
-        name: Some(&update_payload.name.clone()),
-        description: Some(update_payload.description.clone()),
-        active: Some(is_active),
-        images: Some(update_payload.images.clone()),
-        metadata: Some(std::collections::HashMap::from([(
-            String::from("inventory"),
-            String::from((stripe_inventory + db_product.inventory.unwrap_or(0)).to_string().as_str()),
+    let product = products
+        .data
+        .into_iter()
+        .find(|product| product.id.as_str() == stripe_product_id)
+        .unwrap();
+
+    stripe::Product::update(
+        &client,
+        &product.id,
+        stripe::UpdateProduct {
+            name: Some(&update_payload.name.clone()),
+            description: Some(update_payload.description.clone()),
+            active: Some(is_active),
+            images: Some(update_payload.images.clone()),
+            metadata: Some(std::collections::HashMap::from([(
+                String::from("inventory"),
+                String::from(
+                    (stripe_inventory + db_product.inventory.unwrap_or(0))
+                        .to_string()
+                        .as_str(),
+                ),
             )])),
-        ..Default::default()
-    }).await.unwrap();
+            ..Default::default()
+        },
+    )
+    .await
+    .unwrap();
 
     Ok(HttpResponse::Ok().json(product))
 }
@@ -239,19 +272,28 @@ async fn update_product(
 async fn delete_product(
     client: web::Data<stripe::Client>,
     product_id: web::Path<String>,
-    claims: Claims
+    claims: Claims,
 ) -> Result<impl Responder> {
     if !claims.validate_roles(&HashSet::from(["admin".to_string()])) {
         return Ok(HttpResponse::Unauthorized().finish());
     };
 
-    let products = stripe::Product::list(&client, &stripe::ListProducts{
-        ids: Some(vec![product_id.clone()]),
-        ..Default::default()
-    }).await.unwrap();
+    let products = stripe::Product::list(
+        &client,
+        &stripe::ListProducts {
+            ids: Some(vec![product_id.clone()]),
+            ..Default::default()
+        },
+    )
+    .await
+    .unwrap();
 
     let product_id = product_id.into_inner();
-    let product = products.data.into_iter().find(|product| product.id.as_str() == product_id).unwrap();
+    let product = products
+        .data
+        .into_iter()
+        .find(|product| product.id.as_str() == product_id)
+        .unwrap();
 
     stripe::Product::delete(&client, &product.id).await.unwrap();
 
@@ -279,7 +321,7 @@ pub(crate) async fn wh_update_product(
     stripe_product: stripe::Product,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let product = product::NewProduct::new(stripe_product);
-    web::block(move|| {
+    web::block(move || {
         let mut conn = pool.get().unwrap();
         db_update_product(&mut conn, product)
     })
@@ -294,7 +336,7 @@ pub(crate) async fn wh_delete_product(
     stripe_product: stripe::Product,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let product = product::Product::new(stripe_product);
-    web::block(move|| {
+    web::block(move || {
         let mut conn = pool.get().unwrap();
         db_delete_product(&mut conn, product.id)
     })
@@ -308,11 +350,11 @@ pub(crate) async fn wh_change_price(
     pool: web::Data<PgPool>,
     stripe_price: stripe::Price,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let price:BigDecimal = BigDecimal::from_i64(stripe_price.unit_amount.unwrap()).unwrap()/100;
+    let price: BigDecimal = BigDecimal::from_i64(stripe_price.unit_amount.unwrap()).unwrap() / 100;
     let price_id = stripe_price.id.as_str().to_string();
     let product_id = stripe_price.product.unwrap().id().to_string();
 
-    let new_product = product::NewProduct{
+    let new_product = product::NewProduct {
         id: Some(product_id.clone()),
         price: Some(price.clone()),
         price_id: Some(price_id.clone()),

@@ -92,7 +92,7 @@ async fn checkout(
 
     // create a checkout session
     let checkout_session = {
-        let frontend_url = std::env::var("FRONTEND_URL").expect("FRONTEND_URL must be set");
+        let frontend_url = std::env::var("CLIENT_URL").expect("CLIENT_URL must be set");
         let success_url = format!("{}/checkout-approved", frontend_url);
         let cancel_url = format!("{}/checkout-canceled", frontend_url);
 
