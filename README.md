@@ -6,12 +6,3 @@
 `diesel migration run` run migrations  
 `cargo watch -x run` run server  
 `stripe listen --forward-to localhost:8080/api/stripe_webhooks` listen for stripe webhooks
-## TODO
-- [ ] Someway to add to inventory
-- Process transactions
-    - [x] Checkout session
-    - [ ] Decrement inventory
-    - [ ] Check over how payments are processed
-- more stuff...
-- [ ] Secure API
-- [ ] Pen test
